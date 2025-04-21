@@ -1,78 +1,138 @@
-import requests
-from bs4 import BeautifulSoup
+import os
+import json
+import time
+import threading
+import subprocess
+import tkinter as tk
+from tkinter import ttk, messagebox
+from pystray import Icon, Menu, MenuItem
+from PIL import Image
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import sys
+import winreg as reg
 
-# 使用 Session 保持 Cookies
-session = requests.Session()
+CONFIG_FILE = "config.json"
+CHECK_INTERVAL = 300  # 5分钟检测一次
 
-# 设置 headers（User-Agent 需更新为有效值）
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
-}
 
-# 首次获取登录页，提取 lt 和 execution
-login_page_url = 'https://cas.gzittc.com/lyuapServer/login'
-try:
-    response = session.get(login_page_url, headers=headers, timeout=10)
-    response.raise_for_status()  # 检查请求是否成功
+class CampusAutoLogin:
+    def __init__(self):
+        self.load_config()
+        self.setup_gui()
+        self.running = True
+        self.driver = None
+        self.setup_tray_icon()
+        self.setup_auto_start()
+        self.start_check_thread()
 
-    # 解析 HTML 获取表单参数
-    soup = BeautifulSoup(response.text, 'html.parser')
-    lt = soup.find('input', {'name': 'lt'}).get('value')
-    execution = soup.find('input', {'name': 'execution'}).get('value')
+    def setup_gui(self):
+        self.root = tk.Tk()
+        self.root.title("校园网自动登录")
+        self.root.geometry("350x300")
+        self.root.protocol('WM_DELETE_WINDOW', self.minimize_to_tray)
 
-except Exception as e:
-    print(f"获取登录页失败: {e}")
-    exit()
+        # GUI布局
+        ttk.Label(self.root, text="目标WiFi:").grid(row=0, padx=10, pady=5, sticky="w")
+        self.wifi_entry = ttk.Entry(self.root)
+        self.wifi_entry.grid(row=0, column=1, padx=10, pady=5)
+        self.wifi_entry.insert(0, self.config.get('target_wifi', "东1-living"))
 
-# 构造认证数据（替换为你的账号密码）
-auth_data = {
-    'username': "23031901151",
-    'password': "123qweasdzxc",
-    'lt': lt,
-    'execution': execution,
-    '_eventId': 'submit',
-    'submit': '登录'
-}
+        ttk.Label(self.root, text="学号:").grid(row=1, padx=10, pady=5, sticky="w")
+        self.user_entry = ttk.Entry(self.root)
+        self.user_entry.grid(row=1, column=1, padx=10, pady=5)
+        self.user_entry.insert(0, self.config.get('username', ''))
 
-# 提交登录请求
-try:
-    cas_res = session.post(
-        url=login_page_url,
-        data=auth_data,
-        headers=headers,
-        timeout=10,
-        allow_redirects=True  # 允许重定向以跟踪登录结果
-    )
-    print(f"状态码: {cas_res.status_code}")
-    print("响应内容:", cas_res.text)
+        ttk.Label(self.root, text="密码:").grid(row=2, padx=10, pady=5, sticky="w")
+        self.pass_entry = ttk.Entry(self.root, show="*")
+        self.pass_entry.grid(row=2, column=1, padx=10, pady=5)
+        self.pass_entry.insert(0, self.config.get('password', ''))
 
-except requests.exceptions.Timeout:
-    print("请求超时，请检查网络或调整超时时间。")
-except Exception as e:
-    print(f"登录请求异常: {e}")
+        self.auto_start_var = tk.BooleanVar(value=self.config.get('auto_start', False))
+        ttk.Checkbutton(self.root, text="开机启动", variable=self.auto_start_var).grid(row=3, columnspan=2)
 
-# res = requests.get(url, headers=headers)  # 获取json数据（获取后为字典）
-# res = res.json()
-# items = []
-#
-# for item in res['data']['item']:  # 找到字典里data里的item
-#     title = item['title']  # 找到item里的title（标题）
-#     pic_url = item['pic']  # 找到item里的pic（图片链接）
-#     print(f"标题: {title}")
-#     print(f"图片链接: {pic_url}")
-#     print()  # 打印一个空行以分隔不同的视频信息
-#     items.append({'title': title, 'img_url': pic_url})  # 将字典添加到列表中
-#
-#
-# # 读取HTML模板内容
-# env = Environment(loader=FileSystemLoader('.'))  # 假设模板文件在当前目录下
-# template = env.get_template('重新装填.html')  # 加载模板文件
-#
-# # 渲染模板并传递数据
-# final_content = template.render(items=items)  # 注意这里我们使用items变量来传递数据
-#
-# # 步骤 4: 保存HTML文件
-# with open('index.html', 'w', encoding='utf-8') as f:
-#     f.write(final_content)
-#
-# print('HTML文件已生成，请在浏览器中打开index.html文件。')
+        # 新增按钮区域
+        btn_frame = ttk.Frame(self.root)
+        btn_frame.grid(row=4, columnspan=2, pady=10)
+
+        ttk.Button(btn_frame, text="保存配置", command=self.save_config).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="完全退出", command=self.quit_app).pack(side=tk.LEFT, padx=5)
+
+    def setup_tray_icon(self):
+        image = Image.new('RGB', (64, 64), 'white')
+        menu = Menu(
+            MenuItem("显示窗口", self.show_window),
+            MenuItem("完全退出", self.quit_app)
+        )
+        self.icon = Icon("autologin", image, "校园网自动登录", menu)
+
+    def init_edge_driver(self):
+        edge_options = webdriver.EdgeOptions()
+        edge_options.use_chromium = True
+        edge_options.add_argument("--headless")
+        edge_options.add_argument("--disable-gpu")
+        edge_options.add_argument("--no-sandbox")
+
+        # 指定Edge驱动路径（需要根据实际路径修改）
+        service = webdriver.edge.service.Service(executable_path='msedgedriver.exe')
+        self.driver = webdriver.Edge(service=service, options=edge_options)
+
+    def do_login(self):
+        try:
+            self.init_edge_driver()
+            self.driver.get("http://2.2.2.2")
+
+            try:
+                # 等待登录按钮出现（最多等待10秒）
+                login_btn = WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((By.ID, "casAuth"))
+                )
+                login_btn.click()
+                time.sleep(2)
+            except:
+                print("未找到单点登录按钮，尝试直接登录")
+
+            # 处理CAS认证页面
+            if "lyuapServer/login" in self.driver.current_url:
+                WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((By.ID, "username"))
+                ).send_keys(self.config['username'])
+
+                self.driver.find_element(By.ID, "password").send_keys(self.config['password'])
+
+                # 查找真正的提交按钮
+                submit_btn = WebDriverWait(self.driver, 10).until(
+                    EC.element_to_be_clickable((By.XPATH, "//button[@type='submit']"))
+                )
+                submit_btn.click()
+                time.sleep(5)
+
+            return "认证成功" in self.driver.page_source
+        except Exception as e:
+            print(f"登录失败: {str(e)}")
+            return False
+        finally:
+            if self.driver:
+                self.driver.quit()
+
+    # 其他方法保持不变...
+
+    def quit_app(self):
+        self.running = False
+        if hasattr(self, 'driver') and self.driver:
+            try:
+                self.driver.quit()
+            except:
+                pass
+        if hasattr(self, 'icon'):
+            self.icon.stop()
+        if hasattr(self, 'root'):
+            self.root.destroy()
+        os._exit(0)
+
+
+if __name__ == "__main__":
+    app = CampusAutoLogin()
+    app.root.mainloop()
