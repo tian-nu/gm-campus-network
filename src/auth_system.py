@@ -1,9 +1,10 @@
+import os
 import re
 import time
 import json
 import requests
 import socket
-from urllib.parse import unquote, urlparse, parse_qs
+from urllib.parse import unquote, urlparse, parse_qs, urljoin
 from bs4 import BeautifulSoup
 
 
@@ -24,26 +25,45 @@ class AuthManager:
         self.logger(f"{time.strftime('%H:%M:%S')} {message}")
 
     def _safe_request(self, method: str, url: str, **kwargs):
-        """增强型带重试机制的请求方法"""
+        """增强型网络请求，解决超时问题"""
+        # 增加超时到15秒，添加代理支持
+        timeout = kwargs.pop('timeout', 15)
+        proxies = {
+            'http': os.getenv('HTTP_PROXY'),
+            'https': os.getenv('HTTPS_PROXY')
+        }
+
         for attempt in range(self.MAX_RETRIES):
             try:
-                # 添加随机参数防止缓存
-                if method == 'GET' and '?' not in url:
-                    url += f'?_={int(time.time() * 1000)}'
-                elif method == 'GET':
-                    url += f'&_={int(time.time() * 1000)}'
+                # 添加随机延迟防止频闪
+                time.sleep(attempt * 0.5)
 
-                resp = self.session.request(method, url,
-                                            timeout=10,
-                                            allow_redirects=False,
-                                            **kwargs)
+                resp = self.session.request(
+                    method=method,
+                    url=url,
+                    timeout=timeout,
+                    proxies=proxies,
+                    allow_redirects=False,  # 手动处理重定向
+                    **kwargs
+                )
+
+                # 处理特殊重定向
+                if resp.status_code in (301, 302, 303, 307, 308):
+                    new_url = resp.headers.get('Location')
+                    if new_url.startswith('/'):
+                        new_url = urljoin(url, new_url)
+                    self._log(f"重定向至: {new_url}")
+                    return self._safe_request('GET', new_url)
+
                 resp.raise_for_status()
                 return resp
-            except requests.RequestException as e:
+
+            except (requests.Timeout, requests.ConnectionError) as e:
                 if attempt == self.MAX_RETRIES - 1:
                     raise
-                self._log(f"请求失败 ({e}), 第{attempt + 1}次重试...")
-                time.sleep(self.RETRY_DELAY * (attempt + 1))
+                delay = (attempt + 1) * 5  # 递增延迟：5,10,15秒
+                self._log(f"网络错误 ({e}), {delay}秒后重试...")
+                time.sleep(delay)
 
     def _decode_params(self, url: str) -> dict:
         """增强版参数解析，修复wlanacname缺失问题"""
@@ -85,46 +105,18 @@ class AuthManager:
             return '00:00:00:00:00:00'  # 默认值
 
     def _extract_cas_params(self, html: str) -> dict:
-        """深度提取CAS参数（支持多种页面结构）"""
+        """改进的CAS参数提取"""
         params = {'lt': '', 'execution': ''}
 
-        # 方法1：优先使用BeautifulSoup解析
-        try:
-            soup = BeautifulSoup(html, 'lxml')
-            # 查找所有隐藏输入字段
-            hidden_inputs = soup.find_all('input', type='hidden')
-            for inp in hidden_inputs:
-                if inp.get('name') == 'lt':
-                    params['lt'] = inp.get('value', '')
-                elif inp.get('name') == 'execution':
-                    params['execution'] = inp.get('value', '')
-        except Exception as e:
-            self._log(f"BeautifulSoup解析失败: {str(e)}")
+        # 使用更健壮的正则表达式
+        lt_pattern = r'<input\s+type="hidden"\s+name="lt"\s+value="([^"]+)"\s*/>'
+        execution_pattern = r'<input\s+type="hidden"\s+name="execution"\s+value="([^"]+)"\s*/>'
 
-        # 方法2：正则表达式备选方案
-        if not params['lt']:
-            lt_patterns = [
-                r'name="lt"\s+value="([^"]+)"',
-                r'lt\s*=\s*["\']([^"\']+)["\']',
-                r'<input.*?name="lt".*?value="(.*?)"'
-            ]
-            for pattern in lt_patterns:
-                match = re.search(pattern, html, re.I)
-                if match:
-                    params['lt'] = match.group(1)
-                    break
+        lt_match = re.search(lt_pattern, html, re.DOTALL)
+        exec_match = re.search(execution_pattern, html, re.DOTALL)
 
-        if not params['execution']:
-            exec_patterns = [
-                r'name="execution"\s+value="([^"]+)"',
-                r'execution\s*=\s*["\']([^"\']+)["\']',
-                r'<input.*?name="execution".*?value="(.*?)"'
-            ]
-            for pattern in exec_patterns:
-                match = re.search(pattern, html, re.I)
-                if match:
-                    params['execution'] = match.group(1)
-                    break
+        params['lt'] = lt_match.group(1) if lt_match else ''
+        params['execution'] = exec_match.group(1) if exec_match else ''
 
         return params
 
@@ -145,29 +137,18 @@ class AuthManager:
 
     def login_flow(self, username: str, password: str) -> bool:
         try:
-            # 阶段0：清除旧会话
+            # 清除旧会话
             self.session.cookies.clear()
 
-            # 阶段1：获取portal参数（强制刷新）
+            # 第一阶段：获取初始参数
             portal_res = self._safe_request('GET', "http://2.2.2.2")
-            self._log(f"初始跳转URL: {portal_res.url}")
-
-            # 阶段2：解析参数（带自动补全）
             service_params = self._decode_params(portal_res.url)
-            self._log(f"解析参数: {json.dumps(service_params, indent=2)}")
 
-            # 阶段2.5：从页面内容补充参数
-            if not self._validate_params(service_params):
-                fallback_params = self._extract_fallback_params(portal_res.text)
-                service_params.update(fallback_params)
-                self._log(f"补充后参数: {json.dumps(service_params, indent=2)}")
-
-            # 阶段3：获取CAS页面
+            # 第二阶段：获取CAS票据
             cas_res = self._safe_request('GET', portal_res.url)
             tokens = self._extract_cas_params(cas_res.text)
-            self._log(f"获取令牌: lt={tokens['lt'][:10]}... execution={tokens['execution'][:10]}...")
 
-            # 阶段4：构造认证请求
+            # 第三阶段：构建认证payload
             auth_payload = {
                 'username': username,
                 'password': password,
@@ -177,81 +158,57 @@ class AuthManager:
                 'submit': '登录',
                 'loginType': '1',
                 'vlan': '',
-                'domain': ''
+                'domain': '',
+                'service': unquote(service_params.get('service', ''))
             }
 
-            post_res = self._safe_request('POST',
-                                          url=cas_res.url,
-                                          data=auth_payload,
-                                          headers={
-                                              'Origin': urlparse(cas_res.url).scheme + '://' + urlparse(
-                                                  cas_res.url).netloc,
-                                              'Referer': cas_res.url
-                                          }
-                                          )
+            # 第四阶段：提交认证请求
+            post_url = cas_res.url.replace('/login?', '/login;jsessionid=')  # 处理JSessionID
+            post_res = self._safe_request('POST', post_url, data=auth_payload)
 
-            # 阶段5：处理重定向链
-            if post_res.status_code in [302, 307]:
-                redirect_url = post_res.headers.get('Location', '')
-                self._log(f"首次重定向至: {redirect_url}")
+            # 第五阶段：处理重定向链
+            if post_res.status_code == 302:
+                redirect_url = post_res.headers['Location']
+                final_res = self._safe_request('GET', redirect_url)
 
-                # 自动跟随重定向
-                final_res = self._safe_request('GET', redirect_url, allow_redirects=True)
-                success_patterns = [
-                    r'location\.href="http://www\.qq\.com"',  # 常见成功标识
-                    r'认证成功',
-                    r'login-success',
-                    r'resultCode=1'
-                ]
-
-                for pattern in success_patterns:
-                    if re.search(pattern, final_res.text, re.I):
-                        self._log("最终认证成功")
-                        return True
+                # 验证最终结果
+                if 'ticket=' in final_res.url or 'success' in final_res.text:
+                    self._log("CAS认证成功")
+                    return True
 
             # 错误处理
-            error_patterns = {
-                r'账号或密码错误': '密码错误',
-                r'账号已欠费': '账号欠费',
-                r'已达到最大会话数': '多设备登录',
-                r'认证请求过于频繁': '操作频繁'
-            }
+            error_msg = re.search(r'<div class="error">(.+?)</div>', final_res.text)
+            if error_msg:
+                self._log(f"认证失败: {error_msg.group(1)}")
 
-            for pattern, msg in error_patterns.items():
-                if re.search(pattern, post_res.text):
-                    self._log(f"认证失败原因: {msg}")
-                    return False
+            return False
 
+        except Exception as e:
+            self._log(f"认证流程异常: {str(e)}")
             return False
 
         except requests.RequestException as e:
             self._log(f"网络请求异常: {str(e)}")
             return False
-        except Exception as e:
-            self._log(f"未知错误: {str(e)}")
-            return False
 
     def _extract_fallback_params(self, html: str) -> dict:
-        """从页面内容提取备用参数"""
+        """使用更可靠的解析方式"""
         params = {}
 
-        # 方法1：解析JavaScript变量
-        js_patterns = {
-            'wlanuserip': r'wlanuserip\s*=\s*["\']([^"\']+)["\']',
-            'wlanacname': r'wlanacname\s*=\s*["\']([^"\']+)["\']',
-            'usermac': r'usermac\s*=\s*["\']([^"\']+)["\']'
-        }
+        # 方法1：使用纯正则表达式
+        acname_match = re.search(r'wlanacname\s*[:=]\s*["\']([^"\']+)["\']', html)
+        if acname_match:
+            params['wlanacname'] = acname_match.group(1)
 
-        for key, pattern in js_patterns.items():
-            match = re.search(pattern, html)
-            if match:
-                params[key] = match.group(1)
-
-        # 方法2：查找隐藏表单字段
-        soup = BeautifulSoup(html, 'html.parser')
-        for inp in soup.find_all('input', {'type': 'hidden'}):
-            if inp['name'] in ['wlanuserip', 'wlanacname', 'usermac']:
-                params[inp['name']] = inp['value']
+        # 方法2：回退到标准HTML解析器
+        try:
+            soup = BeautifulSoup(html, 'html.parser')  # 使用内置解析器
+            hidden_inputs = soup.find_all('input', {'type': 'hidden'})
+            for inp in hidden_inputs:
+                if inp.get('name') == 'wlanacname':
+                    params['wlanacname'] = inp.get('value', '')
+        except Exception as e:
+            self._log(f"HTML解析失败: {str(e)}")
 
         return params
 
