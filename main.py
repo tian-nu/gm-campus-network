@@ -217,7 +217,7 @@ class CampusNetAuthenticator:
         redirect_count = 0
 
         while redirect_count < max_redirects:
-            if current_response.status_code in [302, 303, 307]:
+            if current_response.status_code in [302, 303, 307, 200]:
                 redirect_url = current_response.headers.get('Location', '')
                 if not redirect_url:
                     break
@@ -364,13 +364,14 @@ class CampusNetAuthenticator:
                 logger.info(f"登录提交状态码: {response.status_code}")
 
                 # 处理登录后的重定向
-                if response.status_code in [302, 303]:
+                # 为什么状态码200还是会进else分支？ 解决了
+                if response.status_code in [302, 303, 200, '200']:
                     final_response = self.follow_redirects(response)
                     final_url = str(final_response.url)
                     logger.info(f"最终URL: {final_url}")
 
                     # 检查是否登录成功
-                    if 'logout.html' in final_url:
+                    if 'xykd.gzittc.edu.cn/portal/usertemp_computer/gongmao-pc-2025/logout.html' in final_url:
                         self.is_logged_in = True
                         logger.info("认证成功！")
 
