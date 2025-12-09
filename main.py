@@ -1130,9 +1130,6 @@ class CampusNetGUI:
             # 启动服务
             self.apply_settings()
 
-            # 登录成功提示
-            if self.login_success_notify_var.get():
-                messagebox.showinfo("成功", f"登录成功: {message}")
         else:
             logger.error(f"登录失败: {message}")
 
@@ -1141,10 +1138,6 @@ class CampusNetGUI:
                 # 网络已经连通，不算失败
                 self.authenticator.is_logged_in = True
                 logger.info("网络已连通，无需登录")
-            else:
-                # 真正的登录失败
-                if self.login_fail_notify_var.get():
-                    messagebox.showerror("登录失败", message)
 
     def auto_login(self):
         """自动登录"""
