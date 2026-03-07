@@ -1,0 +1,4 @@
+# file: D:\PYC项目\自动登录工贸校园网\campus_net_auth\gui\tray.py
+# hypothesis_version: 6.148.7
+
+['#2196F3', 'Image.Image', 'RGB', 'TrayThread', 'campus_net_auth', 'pystray 未安装，无法使用系统托盘', 'pystray.Icon', 'white', '显示窗口', '校园网认证工具', '系统托盘已停止', '系统托盘已启动', '退出']

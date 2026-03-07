@@ -1,0 +1,166 @@
+2025-12-12 20:57:38 - INFO - MainThread - 校园网认证工具启动完成
+2025-12-12 21:14:06 - INFO - MainThread - 校园网认证工具启动完成
+2025-12-12 21:14:18 - INFO - Thread-4 (_do_login) - 开始登录，用户: 23031901151，第 1 次
+2025-12-12 21:14:20 - INFO - Thread-4 (_do_login) - 网络已连通，无需登录
+2025-12-12 21:14:20 - INFO - MainThread - 配置已保存: config.json
+2025-12-12 21:14:20 - INFO - MainThread - 心跳服务已启动，间隔: 120秒
+2025-12-12 21:14:20 - INFO - MainThread - 重连服务已启动，检测间隔: 30秒，冷却时间: 30秒
+2025-12-12 21:14:35 - INFO - MainThread - 系统托盘已启动
+2025-12-12 21:14:35 - INFO - MainThread - 已最小化到系统托盘
+2025-12-12 21:14:40 - INFO - TrayThread - 系统托盘已停止
+2025-12-12 21:14:40 - INFO - TrayThread - 已恢复窗口
+2025-12-12 21:14:43 - INFO - MainThread - 系统托盘已启动
+2025-12-12 21:14:43 - INFO - MainThread - 已最小化到系统托盘
+2025-12-12 21:25:35 - INFO - MainThread - 配置已保存: config.json
+2025-12-12 21:25:35 - INFO - MainThread - 程序退出
+2025-12-12 21:25:50 - INFO - TrayThread - 系统托盘已停止
+2025-12-12 21:25:50 - INFO - TrayThread - 已恢复窗口
+2025-12-12 21:25:52 - INFO - MainThread - 配置已保存: config.json
+2025-12-12 21:25:52 - INFO - MainThread - 心跳服务已停止
+2025-12-12 21:25:52 - INFO - MainThread - 重连服务已停止
+2025-12-12 21:25:52 - INFO - MainThread - 程序退出
+2025-12-12 21:26:00 - INFO - MainThread - 校园网认证工具启动完成
+2025-12-12 21:26:02 - INFO - MainThread - 执行自动登录
+2025-12-12 21:26:02 - INFO - Thread-2 (<lambda>) - 开始登录，用户: 23031901151，第 1 次
+2025-12-12 21:26:08 - INFO - Thread-2 (<lambda>) - 网络已连通，无需登录
+2025-12-12 21:26:08 - INFO - MainThread - 配置已保存: config.json
+2025-12-12 21:26:08 - INFO - MainThread - 心跳服务已启动，间隔: 120秒
+2025-12-12 21:26:08 - INFO - MainThread - 重连服务已启动，检测间隔: 30秒，冷却时间: 30秒
+2025-12-12 21:26:10 - INFO - MainThread - 配置已保存: config.json
+2025-12-12 21:26:10 - INFO - MainThread - 心跳服务已停止
+2025-12-12 21:26:12 - INFO - MainThread - 重连服务已停止
+2025-12-12 21:26:12 - INFO - MainThread - 程序退出
+2025-12-12 21:26:19 - INFO - MainThread - 校园网认证工具启动完成
+2025-12-12 21:26:21 - INFO - MainThread - 执行自动登录
+2025-12-12 21:26:21 - INFO - Thread-2 (<lambda>) - 开始登录，用户: 23031901151，第 1 次
+2025-12-12 21:26:21 - INFO - MainThread - 系统托盘已启动
+2025-12-12 21:26:21 - INFO - MainThread - 已最小化到系统托盘
+2025-12-12 21:26:23 - INFO - Thread-2 (<lambda>) - 网络已连通，无需登录
+2025-12-12 21:26:23 - INFO - MainThread - 配置已保存: config.json
+2025-12-12 21:26:23 - INFO - MainThread - 心跳服务已启动，间隔: 120秒
+2025-12-12 21:26:23 - INFO - MainThread - 重连服务已启动，检测间隔: 30秒，冷却时间: 30秒
+2025-12-12 21:32:55 - INFO - TrayThread - 系统托盘已停止
+2025-12-12 21:32:55 - INFO - TrayThread - 配置已保存: config.json
+2025-12-12 21:32:55 - INFO - TrayThread - 心跳服务已停止
+2025-12-12 21:32:55 - INFO - TrayThread - 重连服务已停止
+2025-12-12 21:32:55 - INFO - TrayThread - 系统托盘已停止
+2025-12-12 21:32:55 - INFO - TrayThread - 程序退出
+2025-12-14 17:04:26 - INFO - MainThread - 校园网认证工具启动完成
+2025-12-14 17:04:27 - INFO - Thread-2 (_do_login) - 开始登录，用户: 23031901151，第 1 次
+2025-12-14 17:04:28 - INFO - MainThread - 执行自动登录
+2025-12-14 17:04:28 - INFO - Thread-3 (<lambda>) - 开始登录，用户: 23031901151，第 2 次
+2025-12-14 17:04:54 - INFO - MainThread - 配置已保存: config.json
+2025-12-14 17:04:54 - INFO - MainThread - 程序退出
+2025-12-18 20:26:01 - INFO - MainThread - 校园网认证工具启动完成
+2025-12-18 20:26:03 - INFO - MainThread - 执行自动登录
+2025-12-18 20:26:03 - INFO - Thread-2 (<lambda>) - 开始登录，用户: 23031901151，第 1 次
+2025-12-18 20:26:03 - INFO - Thread-2 (<lambda>) - 网络已连通，无需登录
+2025-12-18 20:26:03 - INFO - MainThread - 配置已保存: config.json
+2025-12-18 20:26:03 - INFO - MainThread - 心跳服务已启动，间隔: 120秒
+2025-12-18 20:26:03 - INFO - MainThread - 重连服务已启动，检测间隔: 30秒，冷却时间: 30秒
+2025-12-18 20:26:11 - INFO - Thread-4 (_do_login) - 开始登录，用户: 23031901151，第 2 次
+2025-12-18 20:26:11 - INFO - Thread-4 (_do_login) - 网络已连通，无需登录
+2025-12-18 20:26:11 - INFO - MainThread - 配置已保存: config.json
+2025-12-18 20:26:11 - WARNING - MainThread - 心跳服务已在运行
+2025-12-18 20:26:11 - WARNING - MainThread - 重连服务已在运行
+2025-12-18 20:26:48 - INFO - MainThread - 配置已保存: config.json
+2025-12-18 20:26:48 - INFO - MainThread - 心跳服务已停止
+2025-12-18 20:26:48 - INFO - MainThread - 重连服务已停止
+2025-12-18 20:26:48 - INFO - MainThread - 程序退出
+2025-12-18 20:32:08 - INFO - MainThread - 校园网认证工具启动完成
+2025-12-18 20:32:10 - INFO - MainThread - 执行自动登录
+2025-12-18 20:32:10 - INFO - Thread-2 (<lambda>) - 开始登录，用户: 23031901151，第 1 次
+2025-12-18 20:32:10 - INFO - Thread-2 (<lambda>) - 网络已连通，无需登录
+2025-12-18 20:32:10 - INFO - MainThread - 配置已保存: config.json
+2025-12-18 20:32:10 - INFO - MainThread - 心跳服务已启动，间隔: 120秒
+2025-12-18 20:32:10 - INFO - MainThread - 重连服务已启动，检测间隔: 30秒，冷却时间: 30秒
+2025-12-18 20:32:16 - INFO - Thread-4 (_do_login) - 开始登录，用户: 23031901151，第 2 次
+2025-12-18 20:32:16 - INFO - Thread-4 (_do_login) - 网络已连通，无需登录
+2025-12-18 20:32:16 - INFO - MainThread - 配置已保存: config.json
+2025-12-18 20:32:16 - WARNING - MainThread - 心跳服务已在运行
+2025-12-18 20:32:16 - WARNING - MainThread - 重连服务已在运行
+2025-12-18 20:32:17 - INFO - MainThread - 配置已保存: config.json
+2025-12-18 20:32:17 - INFO - MainThread - 心跳服务已停止
+2025-12-18 20:32:17 - INFO - MainThread - 重连服务已停止
+2025-12-18 20:32:17 - INFO - MainThread - 程序退出
+2025-12-18 20:35:43 - INFO - MainThread - 校园网认证工具启动完成
+2025-12-18 20:35:45 - INFO - MainThread - 配置已保存: config.json
+2025-12-18 20:35:45 - INFO - MainThread - 程序退出
+2025-12-18 20:36:07 - INFO - MainThread - 校园网认证工具启动完成
+2025-12-18 20:36:09 - INFO - MainThread - 执行自动登录
+2025-12-18 20:36:09 - INFO - Thread-2 (<lambda>) - 开始登录，用户: 23031901151，第 1 次
+2025-12-18 20:36:09 - INFO - Thread-2 (<lambda>) - 网络已连通，无需登录
+2025-12-18 20:36:09 - INFO - MainThread - 配置已保存: config.json
+2025-12-18 20:36:09 - INFO - MainThread - 心跳服务已启动，间隔: 120秒
+2025-12-18 20:36:09 - INFO - MainThread - 重连服务已启动，检测间隔: 30秒，冷却时间: 30秒
+2025-12-18 20:37:03 - INFO - MainThread - 配置已保存: config.json
+2025-12-18 20:37:03 - INFO - MainThread - 心跳服务已停止
+2025-12-18 20:37:03 - INFO - MainThread - 重连服务已停止
+2025-12-18 20:37:03 - INFO - MainThread - 程序退出
+2026-03-07 12:41:01 - ERROR - MainThread - 清理日志失败: [WinError 32] 另一个程序正在使用此文件，进程无法访问。: 'campus_net.log' -> 'campus_net.log.20260307'
+2026-03-07 12:41:01 - INFO - MainThread - 校园网认证工具启动完成
+2026-03-07 12:41:03 - INFO - MainThread - 执行自动登录
+2026-03-07 12:41:03 - INFO - Thread-2 (<lambda>) - 开始登录，用户: 23031901151，第 1 次
+2026-03-07 12:41:06 - INFO - Thread-4 (_do_login) - 开始登录，用户: 23031901151，第 2 次
+2026-03-07 12:41:08 - INFO - Thread-2 (<lambda>) - 网络未连通，开始认证流程
+2026-03-07 12:41:08 - INFO - Thread-2 (<lambda>) - 认证 URL: http://10.10.21.129/portalScript.do?wlanuserip=10.111.50.21&wlanacname=Ne8000-M14&usermac=c0%3Aa5%3Ae8%3Aa7%3Aa5%3A89
+2026-03-07 12:41:08 - INFO - Thread-2 (<lambda>) - 在 portalScript.do 页面，准备单点登录
+2026-03-07 12:41:08 - INFO - Thread-2 (<lambda>) - 单点登录 URL: http://10.10.21.129/portalCasAuth.do?wlanuserip=10.111.50.21&wlanacname=Ne8000-M14&usermac=c0%3Aa5%3Ae8%3Aa7%3Aa5%3A89&rand=1772858468572
+2026-03-07 12:41:08 - INFO - Thread-2 (<lambda>) - 单点登录重定向: https://cas.gzittc.com/lyuapServer/login?service=http%3A%2F%2Fxykd.gzittc.edu.cn%2FportalCasAuth.do%3Fwlanuserip%3D10.111.50.21%26wlanacname%3DNe8000-M14%26usermac%3Dc0%253Aa5%253Ae8%253Aa7%253Aa5%253A89%26rand%3D1772858468572
+2026-03-07 12:41:08 - INFO - Thread-2 (<lambda>) - 在 CAS 登录页面
+2026-03-07 12:41:08 - INFO - Thread-2 (<lambda>) - 提交登录数据: {'username': '23031901151', 'password': '***', 'captcha': '', 'warn': 'true', 'lt': 'LT-480717-32L2gJtjkBZtdKxCGdKAG2B2KvWpFf-cas01.example.org', 'execution': 'e1s1', '_eventId': 'submit', 'submit': '登录'}
+2026-03-07 12:41:08 - INFO - Thread-2 (<lambda>) - 登录提交状态码: 302
+2026-03-07 12:41:08 - INFO - Thread-2 (<lambda>) - 重定向 1: http://xykd.gzittc.edu.cn/portalCasAuth.do?wlanuserip=10.111.50.21&wlanacname=Ne8000-M14&usermac=c0%3Aa5%3Ae8%3Aa7%3Aa5%3A89&rand=1772858468572&ticket=ST-358753-mlKoKSz5YlBb3vom117x-cas01.example.org
+2026-03-07 12:41:08 - INFO - Thread-2 (<lambda>) - 重定向 2: http://xykd.gzittc.edu.cn/portalCasAuth.do?wlanuserip=10.111.50.21&wlanacname=Ne8000-M14&usermac=c0%3Aa5%3Ae8%3Aa7%3Aa5%3A89&rand=1772858468572
+2026-03-07 12:41:09 - INFO - Thread-2 (<lambda>) - 重定向 3: /portal/usertemp_computer/gongmao-pc-2025/logout.html?wlanacname=Ne8000-M14&wlanuserip=10.111.50.21&version=1&vl an=null
+2026-03-07 12:41:09 - INFO - Thread-2 (<lambda>) - 重定向结束，最终 URL: http://xykd.gzittc.edu.cn/portal/usertemp_computer/gongmao-pc-2025/logout.html?wlanacname=Ne8000-M14&wlanuserip=10.111.50.21&version=1&vlan=null
+2026-03-07 12:41:09 - INFO - Thread-2 (<lambda>) - 认证成功！
+2026-03-07 12:41:16 - INFO - Thread-4 (_do_login) - 网络未连通，开始认证流程
+2026-03-07 12:41:16 - INFO - Thread-4 (_do_login) - 认证 URL: http://10.10.21.129/portalScript.do?wlanuserip=10.111.50.21&wlanacname=Ne8000-M14&usermac=c0%3Aa5%3Ae8%3Aa7%3Aa5%3A89
+2026-03-07 12:41:17 - INFO - Thread-4 (_do_login) - 在 portalScript.do 页面，准备单点登录
+2026-03-07 12:41:17 - INFO - Thread-4 (_do_login) - 单点登录 URL: http://10.10.21.129/portalCasAuth.do?wlanuserip=10.111.50.21&wlanacname=Ne8000-M14&usermac=c0%3Aa5%3Ae8%3Aa7%3Aa5%3A89&rand=1772858477013
+2026-03-07 12:41:17 - INFO - Thread-4 (_do_login) - 单点登录重定向: https://cas.gzittc.com/lyuapServer/login?service=http%3A%2F%2Fxykd.gzittc.edu.cn%2FportalCasAuth.do%3Fwlanuserip%3D10.111.50.21%26wlanacname%3DNe8000-M14%26usermac%3Dc0%253Aa5%253Ae8%253Aa7%253Aa5%253A89%26rand%3D1772858477013
+2026-03-07 12:41:28 - INFO - MainThread - 配置已保存: config.json
+2026-03-07 12:41:28 - INFO - MainThread - 心跳服务已启动，间隔: 120秒
+2026-03-07 12:41:28 - INFO - MainThread - 重连服务已启动，检测间隔: 30秒，冷却时间: 30秒
+2026-03-07 13:17:43 - INFO - MainThread - 配置已保存: config.json
+2026-03-07 13:17:43 - INFO - MainThread - 心跳服务已停止
+2026-03-07 13:17:43 - INFO - MainThread - 重连服务已停止
+2026-03-07 13:17:43 - INFO - MainThread - 程序退出
+2026-03-07 14:44:04 - INFO - MainThread - 校园网认证工具启动完成
+2026-03-07 14:44:06 - INFO - MainThread - 执行自动登录
+2026-03-07 14:44:06 - INFO - Thread-2 (<lambda>) - 开始登录，用户: 23031901151，第 1 次
+2026-03-07 14:44:07 - INFO - Thread-2 (<lambda>) - 网络已连通，无需登录
+2026-03-07 14:44:07 - INFO - MainThread - 配置已保存: config.json
+2026-03-07 14:44:07 - INFO - MainThread - 心跳服务已启动，间隔: 120秒
+2026-03-07 14:44:07 - INFO - MainThread - 重连服务已启动，检测间隔: 30秒，冷却时间: 30秒
+2026-03-07 14:44:07 - INFO - MainThread - 看门狗服务已启动，监控 2 个服务
+2026-03-07 14:44:26 - INFO - MainThread - 配置已保存: config.json
+2026-03-07 14:44:26 - INFO - MainThread - 看门狗服务已停止
+2026-03-07 14:44:26 - INFO - MainThread - 心跳服务已停止
+2026-03-07 14:44:26 - INFO - MainThread - 重连服务已停止
+2026-03-07 14:44:26 - INFO - MainThread - 程序退出
+2026-03-07 14:52:54 - INFO - MainThread - 校园网认证工具启动完成
+2026-03-07 14:52:56 - INFO - MainThread - 执行自动登录
+2026-03-07 14:52:56 - INFO - Thread-2 (<lambda>) - 开始登录，用户: 23031901151，第 1 次
+2026-03-07 14:52:57 - INFO - Thread-2 (<lambda>) - 网络已连通，无需登录
+2026-03-07 14:52:57 - INFO - MainThread - 配置已保存: config.json
+2026-03-07 14:52:57 - INFO - MainThread - 心跳服务已启动，间隔: 120秒
+2026-03-07 14:52:57 - INFO - MainThread - 重连服务已启动，检测间隔: 30秒，冷却时间: 30秒
+2026-03-07 14:52:57 - INFO - MainThread - 看门狗服务已启动，监控 2 个服务
+2026-03-07 14:53:02 - WARNING - MainThread - 系统代理已开启: 127.0.0.1:7897
+2026-03-07 14:53:14 - WARNING - MainThread - 用户选择忽略代理警告继续登录
+2026-03-07 14:53:14 - INFO - Thread-6 (_do_login) - 开始登录，用户: 23031901151，第 2 次
+2026-03-07 14:53:15 - INFO - Thread-6 (_do_login) - 网络已连通，无需登录
+2026-03-07 14:53:15 - INFO - MainThread - 配置已保存: config.json
+2026-03-07 14:53:15 - WARNING - MainThread - 心跳服务已在运行
+2026-03-07 14:53:15 - WARNING - MainThread - 重连服务已在运行
+2026-03-07 14:53:32 - INFO - MainThread - 系统托盘已启动
+2026-03-07 14:53:32 - INFO - MainThread - 已最小化到系统托盘
+2026-03-07 14:53:38 - INFO - TrayThread - 系统托盘已停止
+2026-03-07 14:53:38 - INFO - TrayThread - 配置已保存: config.json
+2026-03-07 14:53:38 - INFO - TrayThread - 看门狗服务已停止
+2026-03-07 14:53:38 - INFO - TrayThread - 心跳服务已停止
+2026-03-07 14:53:38 - INFO - TrayThread - 重连服务已停止
+2026-03-07 14:53:38 - INFO - TrayThread - 系统托盘已停止
+2026-03-07 14:53:38 - INFO - TrayThread - 程序退出

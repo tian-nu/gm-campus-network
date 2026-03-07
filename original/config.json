@@ -1,0 +1,13 @@
+{
+  "username": "23031901151",
+  "password": "eQF7bGcPQgp-dTg=",
+  "remember_password": true,
+  "startup": false,
+  "auto_login": false,
+  "minimize_startup": true,
+  "heartbeat_interval": 300,
+  "reconnect_interval": 30,
+  "max_retries": 3,
+  "auto_reconnect": true,
+  "heartbeat_enable": true
+}

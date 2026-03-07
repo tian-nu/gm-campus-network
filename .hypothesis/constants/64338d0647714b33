@@ -1,0 +1,4 @@
+# file: D:\PYC项目\自动登录工贸校园网\campus_net_auth\core\authenticator.py
+# hypothesis_version: 6.148.7
+
+[200, 204, 302, 303, 307, 1000, '***', '/', 'LT-[^"\\\'<>\\s]+', 'Location', '_eventId', 'captcha', 'e1s1', 'execution', 'ip', 'lt', 'mac', 'password', 'portalScript', 'portalScript.do', 'rand', 'submit', 'timeout', 'true', 'usermac', 'username', 'vl an', 'vlan', 'warn', 'wlanacname', 'wlanuserip', '在 CAS 登录页面', '封禁', '封禁(\\d+)分钟', '无法找到登录令牌(lt)', '用户名或密码错误', '登录', '登录次数过多', '禁止登录', '网络已连通', '网络已连通，无需登录', '网络未连通，开始认证流程', '认证失败', '认证成功', '认证成功但无法访问外网', '认证成功！', '认证成功（网络稍后恢复）', '账号锁定', '账户锁定', '连接超时', '连接超时，请检查网络', '连接错误', '连接错误，请检查网络', '错误[：:]\\s*([^<]+)', '限制登录', '频繁登录']

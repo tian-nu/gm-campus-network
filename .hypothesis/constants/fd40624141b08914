@@ -1,0 +1,4 @@
+# file: D:\PYC项目\自动登录工贸校园网\campus_net_auth\gui\tabs\__init__.py
+# hypothesis_version: 6.148.7
+
+['LoginTab', 'LogsTab', 'SettingsTab']

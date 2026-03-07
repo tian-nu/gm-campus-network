@@ -1,0 +1,4 @@
+# file: D:\PYC项目\自动登录工贸校园网\campus_net_auth\core\constants.py
+# hypothesis_version: 6.148.7
+
+[120, 400, 550, '#2196F3', '#333333', '#4CAF50', '#666666', '#E0E0E0', '#F44336', '#FF9800', '#FFFFFF', '1', '10.10.21.129', '450x650', 'Accept', 'Accept-Encoding', 'Accept-Language', 'Connection', 'Microsoft YaHei UI', 'Ne8000-M14', 'User-Agent', 'campus_net.log', 'cas.gzittc.com', 'gzip, deflate', 'keep-alive', 'xykd.gzittc.edu.cn', '校园网自动认证工具 v2.0']

@@ -1,0 +1,4 @@
+# file: D:\PYC项目\自动登录工贸校园网\campus_net_auth\gui\tabs\logs.py
+# hypothesis_version: 6.148.7
+
+[1.0, -1000, 1000, '#1E1E1E', '#2196F3', '#264F78', '#333333', '#4CAF50', '#666666', '#D4D4D4', '#F44336', '#FF9800', '*.*', '*.log', '*.txt', '.', '.txt', 'Consolas', 'Microsoft YaHei UI', 'bold', 'campus_net.log', 'darwin', 'default', 'end-1c', 'error', 'info', 'primary', 'r', 'success', 'utf-8', 'w', 'warning', 'white', 'win32', '✓ 已打开日志文件', '✓ 日志已清空', '保存日志', '刷新', '所有文件', '打开日志文件', '文本文件', '日志文件', '日志文件不存在', '日志显示已清空', '清空日志', '运行日志']

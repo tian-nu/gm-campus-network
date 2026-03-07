@@ -1,0 +1,11 @@
+# Core dependencies
+requests>=2.28.0
+
+# GUI dependencies (system tray)
+pillow>=9.0.0
+pystray>=0.19.0
+
+# Test dependencies
+pytest>=7.0.0
+hypothesis>=6.0.0
+pytest-cov>=4.0.0

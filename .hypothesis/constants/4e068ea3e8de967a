@@ -1,0 +1,4 @@
+# file: D:\PYC项目\自动登录工贸校园网\campus_net_auth\config\defaults.py
+# hypothesis_version: 6.148.7
+
+[120, 'AppConfig', 'auto_clean_log', 'auto_login', 'debug_mode', 'enable_heartbeat', 'enable_reconnect', 'heartbeat_interval', 'heartbeat_url', 'log_retention_days', 'login_fail_notify', 'login_success_notify', 'mac_address', 'max_retries', 'minimize_startup', 'password', 'reconnect_cooldown', 'reconnect_interval', 'remember_password', 'startup', 'timeout', 'username', 'verbose_log']
