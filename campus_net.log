@@ -164,3 +164,24 @@
 2026-03-07 14:53:38 - INFO - TrayThread - 重连服务已停止
 2026-03-07 14:53:38 - INFO - TrayThread - 系统托盘已停止
 2026-03-07 14:53:38 - INFO - TrayThread - 程序退出
+2026-03-07 17:34:38 - INFO - MainThread - 校园网认证工具启动完成
+2026-03-07 17:34:40 - INFO - MainThread - 执行自动登录
+2026-03-07 17:34:40 - INFO - Thread-2 (<lambda>) - 开始登录，用户: 23031901151，第 1 次
+2026-03-07 17:34:41 - INFO - Thread-2 (<lambda>) - 网络已连通，无需登录
+2026-03-07 17:34:41 - INFO - MainThread - 配置已保存: config.json
+2026-03-07 17:34:41 - INFO - MainThread - 心跳服务已启动，间隔: 120秒
+2026-03-07 17:34:41 - INFO - MainThread - 重连服务已启动，检测间隔: 30秒，冷却时间: 30秒
+2026-03-07 17:34:41 - INFO - MainThread - 看门狗服务已启动，监控 2 个服务
+2026-03-07 17:39:17 - INFO - ReconnectThread - 网络稳定，检测间隔调整为: 60 秒
+2026-03-07 17:39:29 - WARNING - MainThread - 系统代理已开启: 127.0.0.1:7897
+2026-03-07 17:39:33 - WARNING - MainThread - 检测到代理已开启
+2026-03-07 17:39:33 - INFO - Thread-61 (_do_login) - 开始登录，用户: 23031901151，第 2 次
+2026-03-07 17:39:34 - INFO - Thread-61 (_do_login) - 网络已连通，无需登录
+2026-03-07 17:39:34 - INFO - MainThread - 配置已保存: config.json
+2026-03-07 17:39:34 - WARNING - MainThread - 心跳服务已在运行
+2026-03-07 17:39:34 - WARNING - MainThread - 重连服务已在运行
+2026-03-07 17:40:27 - INFO - MainThread - 配置已保存: config.json
+2026-03-07 17:40:27 - INFO - MainThread - 看门狗服务已停止
+2026-03-07 17:40:27 - INFO - MainThread - 心跳服务已停止
+2026-03-07 17:40:27 - INFO - MainThread - 重连服务已停止
+2026-03-07 17:40:27 - INFO - MainThread - 程序退出

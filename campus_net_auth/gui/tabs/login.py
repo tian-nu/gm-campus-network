@@ -7,7 +7,6 @@ import logging
 import threading
 from datetime import datetime
 from tkinter import *
-from tkinter import messagebox
 from typing import Callable, Optional
 
 from ..widgets import LabeledEntry, StatusLabel, ActionButton, SettingGroup
@@ -43,6 +42,7 @@ class LoginTab(Frame):
         self.login_count = 0
         self.last_login_time: Optional[datetime] = None
         self.check_proxy_before_login = True  # 是否在登录前检测代理
+        self._proxy_warned = False  # 是否已提示过代理警告
 
         self._create_widgets()
 
@@ -105,6 +105,14 @@ class LoginTab(Frame):
             height=2
         )
         self.login_btn.pack(pady=5)
+
+        # 代理警告标签（默认隐藏）
+        self.proxy_warning_label = Label(
+            button_frame,
+            text="⚠ 检测到代理已开启，登录可能被封禁",
+            font=("Microsoft YaHei UI", 9),
+            fg="#FF9800"
+        )
 
         # 最小化按钮
         self.minimize_btn = ActionButton(
@@ -216,21 +224,14 @@ class LoginTab(Frame):
             self._show_message("请输入学号和密码", "warning")
             return
 
-        # 检测代理
-        if self.check_proxy_before_login:
+        # 检测代理（仅首次提示，不影响操作）
+        if self.check_proxy_before_login and not self._proxy_warned:
             has_proxy, warning_msg = NetworkInfo.check_proxy_before_login()
             if has_proxy:
-                # 弹出警告对话框
-                should_continue = messagebox.askyesno(
-                    "检测到代理",
-                    warning_msg + "\n\n是否仍要继续登录？",
-                    icon='warning'
-                )
-                if not should_continue:
-                    self.logger.info("用户取消登录（代理已开启）")
-                    return
-                else:
-                    self.logger.warning("用户选择忽略代理警告继续登录")
+                # 显示警告标签，不弹窗
+                self.proxy_warning_label.pack(pady=(5, 0))
+                self._proxy_warned = True
+                self.logger.warning("检测到代理已开启")
 
         self.is_logging_in = True
         self.login_btn.set_loading(True, "登录中...")
