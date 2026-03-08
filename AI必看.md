@@ -83,6 +83,63 @@ campus_net_auth/
 - **问题**：开着代理登录校园网可能被检测为异常行为，导致封禁30分钟
 - **解决**：添加代理检测功能，登录前自动检测并警告用户
 
+### 9. 窗口调整大小时卡顿（已解决）
+- **问题**：拖动改变窗口大小时软件会异常卡顿，且设置页面无法滚动
+- **根本原因**：
+  1. 日志Text控件使用wrap=WORD，窗口调整时需要重新计算所有文本的换行位置
+  2. 设置页面有大量控件(多个SettingGroup、几十个Checkbox/Spinbox等)，无滚动功能
+  3. 窗口大小改变时触发频繁的布局重绘
+  4. 没有对resize事件进行防抖处理
+- **解决（v2版本优化）**：
+  1. 将Text控件的wrap=NONE改为wrap=CHAR（性能优于WORD，用户体验优于NONE）
+  2. 移除水平滚动条，保持垂直滚动，恢复正常换行显示
+  3. 减少日志最大显示行数(从500降到200)
+  4. 为设置页面添加Canvas+Scrollbar滚动功能，解决内容过多无法查看的问题
+  5. 绑定<Configure>事件，实现500ms防抖机制，resize期间暂停状态更新
+  6. 简化设置页面的布局嵌套层级，合并不必要的Frame
+  7. 确保使用轻量级clam主题，禁用动画效果
+- **优化文件**：
+  - `campus_net_auth/gui/tabs/logs.py` (Text控件wrap模式优化)
+  - `campus_net_auth/gui/app.py` (防抖机制和resize期间状态暂停)
+  - `campus_net_auth/gui/tabs/settings.py` (添加滚动功能)
+
+### 10. 主界面（登录页面）显示不全（已解决）
+- **问题**：主界面内容过多，无法滚动查看底部内容；默认窗口太小，内容显示不全；点击登录会卡死
+- **解决**：
+  1. 将窗口默认大小从450x650改为675x975（1.5倍）
+  2. 将最小窗口大小从(400, 550)改为(600, 825)
+  3. 使用Canvas+Scrollbar实现页面滚动功能
+  4. 优化Configure事件处理，延迟绑定避免初始化时触发
+  5. 使用update_idletasks确保布局完成后再调整宽度
+  6. 绑定鼠标滚轮事件，支持滚轮滚动
+- **优化文件**：
+  - `campus_net_auth/core/constants.py` (调整窗口大小)
+  - `campus_net_auth/gui/tabs/login.py` (修复滚动功能)
+
+### 11. portalCasAuth.do 服务器错误检测（已解决）
+- **问题**：重定向到 `portalCasAuth.do` 时，服务器返回错误 "The server encountered an error and was unable to complete your request"，实际上是账号被封禁
+- **解决**：
+  1. 在 `_handle_portal_script` 方法中增加服务器错误检测
+  2. 检测关键词包括：服务器错误、server error、无法完成请求等
+  3. 检测到错误后立即返回封禁提示，避免继续无效操作
+- **优化文件**：
+  - `campus_net_auth/core/authenticator.py` (新增 `_is_server_error_banned` 方法)
+
+### 12. 开代理时登录导致不规律封禁（已解决）
+- **问题**：用户开着代理时使用自动登录，有很大概率被不规律封禁
+- **根本原因**：
+  1. 心跳服务每120秒ping一次网络
+  2. 重连服务检测网络时会访问 `portal.do`（登录相关页面）
+  3. 如果开代理，请求走代理通道，服务器看到的IP和校园网IP不一致
+  4. 服务器检测到异常行为（IP不一致），触发封禁机制
+- **解决**：
+  1. 心跳服务请求添加 `proxies={"http": None, "https": None}` 禁用代理
+  2. 网络检测请求禁用代理
+  3. Session对象设置 `trust_env = False`，不从环境变量读取代理设置
+- **优化文件**：
+  - `campus_net_auth/core/network.py` (心跳服务禁用代理)
+  - `campus_net_auth/core/authenticator.py` (网络检测和Session禁用代理)
+
 ## 开发注意事项
 1. 所有网络请求需要设置超时时间
 2. 日志使用 `logging` 模块，统一格式

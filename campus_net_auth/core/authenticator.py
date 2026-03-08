@@ -32,7 +32,7 @@ class AuthResult:
 class CampusNetAuthenticator:
     """校园网认证器"""
 
-    def __init__(self, config: dict):
+    def __init__(self, config: dict[str, object]):
         """
         初始化认证器
 
@@ -45,6 +45,10 @@ class CampusNetAuthenticator:
         # 创建请求会话
         self.session = requests.Session()
         self.session.headers.update(Constants.DEFAULT_HEADERS)
+        # 禁用代理，避免因代理IP不一致导致封禁
+        self.session.proxies = {"http": None, "https": None}
+        # 禁用环境变量中的代理设置
+        self.session.trust_env = False
 
         # 状态管理
         self.is_logged_in = False
@@ -70,13 +74,17 @@ class CampusNetAuthenticator:
         """
         import concurrent.futures
         
+        # 禁用代理，避免因代理IP不一致导致封禁
+        no_proxy = {"http": None, "https": None}
+        
         def check_single_url(url: str) -> tuple:
             """检测单个URL"""
             try:
                 response = requests.get(
                     url,
                     timeout=self.timeout,
-                    allow_redirects=False
+                    allow_redirects=False,
+                    proxies=no_proxy
                 )
 
                 # 检查是否重定向到认证页面
@@ -122,7 +130,8 @@ class CampusNetAuthenticator:
             response = self.session.get(
                 f"http://{Constants.PORTAL_IP}/portal.do",
                 timeout=self.timeout,
-                allow_redirects=False
+                allow_redirects=False,
+                proxies=no_proxy
             )
             if response.status_code == 200 and "portalScript" in response.text:
                 return False
@@ -176,7 +185,9 @@ class CampusNetAuthenticator:
 
             # 处理 portalScript.do 页面
             if "portalScript.do" in current_url:
-                response = self._handle_portal_script(response, current_url)
+                response, is_banned = self._handle_portal_script(response, current_url)
+                if is_banned:
+                    return False, "账号已被封禁，服务器返回错误，请稍后再试"
                 current_url = str(response.url)
 
             # 处理 CAS 登录页面
@@ -204,8 +215,12 @@ class CampusNetAuthenticator:
         }
         return f"http://{Constants.PORTAL_IP}/portalScript.do?{urlencode(params)}"
 
-    def _handle_portal_script(self, response: requests.Response, current_url: str) -> requests.Response:
-        """处理 portalScript.do 页面"""
+    def _handle_portal_script(self, response: requests.Response, current_url: str) -> Tuple[requests.Response, bool]:
+        """处理 portalScript.do 页面
+
+        Returns:
+            (response, is_banned) 元组，is_banned 表示是否检测到服务器错误（封禁）
+        """
         self.logger.info("在 portalScript.do 页面，准备单点登录")
 
         # 提取参数
@@ -230,6 +245,11 @@ class CampusNetAuthenticator:
             allow_redirects=False
         )
 
+        # 检测服务器错误（通常表示账号被封禁）
+        if self._is_server_error_banned(response.text):
+            self.logger.warning("检测到服务器错误，账号可能被封禁")
+            return response, True
+
         if response.status_code in [302, 303]:
             redirect_url = response.headers.get("Location", "")
             if redirect_url:
@@ -239,8 +259,28 @@ class CampusNetAuthenticator:
                     timeout=self.timeout,
                     allow_redirects=True
                 )
+                # 检测重定向后的服务器错误
+                if self._is_server_error_banned(response.text):
+                    self.logger.warning("检测到服务器错误，账号可能被封禁")
+                    return response, True
 
-        return response
+        return response, False
+
+    def _is_server_error_banned(self, html: str) -> bool:
+        """检测服务器错误页面是否表示封禁状态"""
+        server_error_keywords = [
+            "The server encountered an error and was unable to complete your request",
+            "The server encountered an error",
+            "server error",
+            "服务器错误",
+            "无法完成请求",
+        ]
+
+        html_lower = html.lower()
+        for keyword in server_error_keywords:
+            if keyword.lower() in html_lower:
+                return True
+        return False
 
     def _handle_cas_login(self, response: requests.Response, current_url: str) -> Tuple[bool, str]:
         """处理 CAS 登录页面"""
@@ -446,4 +486,7 @@ class CampusNetAuthenticator:
         """重置会话"""
         self.session = requests.Session()
         self.session.headers.update(Constants.DEFAULT_HEADERS)
+        # 禁用代理，避免因代理IP不一致导致封禁
+        self.session.proxies = {"http": None, "https": None}
+        self.session.trust_env = False
         self.is_logged_in = False

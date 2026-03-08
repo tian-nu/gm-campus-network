@@ -37,9 +37,9 @@ class Constants:
     LOG_FILE = "campus_net.log"
 
     # ==================== GUI 相关 ====================
-    WINDOW_TITLE = "校园网自动认证工具 v2.0"
-    WINDOW_SIZE = "450x650"
-    MIN_WINDOW_SIZE = (400, 550)
+    WINDOW_TITLE = "校园网自动认证工具 v1.0"
+    WINDOW_SIZE = "675x975"
+    MIN_WINDOW_SIZE = (600, 825)
 
     # 字体配置
     FONT_FAMILY = "Microsoft YaHei UI"

@@ -103,9 +103,12 @@ class HeartbeatService:
 
     def _worker(self) -> None:
         """心跳工作线程"""
+        # 禁用代理，避免因代理IP不一致导致封禁
+        no_proxy = {"http": None, "https": None}
+        
         while not self._stop_event.is_set():
             try:
-                response = requests.get(self.url, timeout=self.timeout)
+                response = requests.get(self.url, timeout=self.timeout, proxies=no_proxy)
                 if response.status_code in [200, 204]:
                     self.success_count += 1
                     self.last_success_time = time.time()
