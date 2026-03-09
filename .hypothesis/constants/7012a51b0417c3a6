@@ -1,4 +1,0 @@
-# file: D:\PYC项目\自动登录工贸校园网\campus_net_auth\utils\logger.py
-# hypothesis_version: 6.148.7
-
-[' - ', '%Y-%m-%d %H:%M:%S', 'campus_net.log', 'utf-8']

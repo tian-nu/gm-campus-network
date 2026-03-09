@@ -1,4 +1,0 @@
-# file: D:\PYC项目\自动登录工贸校园网\campus_net_auth\gui\app.py
-# hypothesis_version: 6.148.7
-
-[120, 2000, 5000, 'WM_DELETE_WINDOW', 'auto_clean_log', 'auto_login', 'debug_mode', 'enable_heartbeat', 'enable_reconnect', 'heartbeat_interval', 'heartbeat_url', 'ip', 'log_retention_days', 'mac', 'mac_address', 'password', 'reconnect_cooldown', 'reconnect_interval', 'remember_password', 'timeout', 'username', '已恢复窗口', '已最小化到任务栏', '已最小化到系统托盘', '执行自动登录', '日志', '校园网认证工具启动完成', '登录', '程序退出', '设置', '设置已保存', '设置已重置']

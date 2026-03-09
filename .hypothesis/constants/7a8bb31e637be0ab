@@ -1,4 +1,0 @@
-# file: D:\PYC项目\自动登录工贸校园网\campus_net_auth\utils\network_info.py
-# hypothesis_version: 6.148.7
-
-[255, 1000, '"', '%012x', ',', '-', '.', '/fo', '/nh', '00:00:00:00:00:00', '10.0.0.1', '127.', '8.8.8.8', ':', 'csv', 'getmac', 'ip', 'ipconfig', 'mac', 'mac_address', 'timestamp', '无法获取 IP 地址，使用默认值', '无法获取 MAC 地址，使用默认值']
