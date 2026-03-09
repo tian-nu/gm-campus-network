@@ -1,4 +1,4 @@
-# 校园网自动认证工具 v2.0
+# 校园网自动认证工具 v1.0
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -41,14 +41,13 @@
 │   │       ├── settings.py     # 设置页
 │   │       └── logs.py         # 日志页
 │   └── utils/                  # 工具模块
-│       ├── logger.py           # 日志配置
-│       └── network_info.py     # 网络信息
+        ├── logger.py           # 日志配置
+        └── network_info.py     # 网络信息
 ├── tests/                      # 测试模块
-│   ├── test_config.py          # 配置测试
 │   ├── test_authenticator.py   # 认证器测试
-│   ├── test_network.py         # 网络服务测试
-│   └── test_logger.py          # 日志测试
-└── original/                   # 原项目备份
+│   ├── test_config.py          # 配置管理测试
+│   ├── test_network.py         # 网络功能测试
+│   └── ...                     # 其他测试文件
 ```
 
 ## 安装
@@ -83,19 +82,6 @@ python main.py
 | 冷却时间 | 重连失败后等待时间 | 30 秒 |
 | 超时时间 | 网络请求超时 | 10 秒 |
 
-## 运行测试
-
-```bash
-# 运行所有测试
-python -m pytest tests/ -v
-
-# 运行特定测试
-python -m pytest tests/test_config.py -v
-
-# 运行属性测试
-python -m pytest tests/ -v -k "property"
-```
-
 ## 配置文件
 
 配置保存在 `config.json`，包含：
@@ -108,10 +94,6 @@ python -m pytest tests/ -v -k "property"
 ## 日志
 
 日志保存在 `campus_net.log`，可在"日志"标签页查看。
-
-## 原项目
-
-原项目文件已备份到 `original/` 目录。
 
 ## 许可证
 
