@@ -8,45 +8,7 @@ from tkinter import ttk
 from typing import Optional, Callable
 
 
-class ScrollableFrame:
-    """可滚动的 Frame 容器"""
 
-    def __init__(self, container: Widget, **kwargs):
-        """
-        初始化可滚动框架
-
-        Args:
-            container: 父容器
-            **kwargs: Canvas 参数
-        """
-        self.canvas = Canvas(container, **kwargs)
-        self.scrollbar = Scrollbar(container, orient="vertical", command=self.canvas.yview)
-        self.scrollable_frame = Frame(self.canvas)
-
-        # 绑定滚动事件
-        self.scrollable_frame.bind(
-            "<Configure>",
-            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-        )
-
-        # 创建窗口
-        self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-        self.canvas.configure(yscrollcommand=self.scrollbar.set)
-
-        # 绑定鼠标滚轮
-        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
-
-        # 布局
-        self.canvas.pack(side="left", fill="both", expand=True)
-        self.scrollbar.pack(side="right", fill="y")
-
-    def _on_mousewheel(self, event):
-        """处理鼠标滚轮"""
-        self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-
-    def pack(self, **kwargs):
-        """打包 Canvas"""
-        self.canvas.pack(**kwargs)
 
 
 class LabeledEntry(Frame):

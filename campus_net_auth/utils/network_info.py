@@ -69,7 +69,7 @@ class NetworkInfo:
         return "10.0.0.1"
 
     @staticmethod
-    def get_mac_address(config: Optional[dict] = None) -> str:
+    def get_mac_address(config: Optional[dict[str, object]] = None) -> str:
         """
         获取 MAC 地址
 

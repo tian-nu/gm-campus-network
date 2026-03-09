@@ -16,7 +16,7 @@
   "reconnect_interval": 30,
   "reconnect_cooldown": 30,
   "debug_mode": false,
-  "verbose_log": true,
+  "verbose_log": false,
   "auto_clean_log": true,
   "log_retention_days": 7,
   "enable_auto_retry_after_ban": true,

@@ -4,6 +4,7 @@
 """
 
 import logging
+import sys
 import threading
 from tkinter import *
 from tkinter import ttk
@@ -36,6 +37,9 @@ class CampusNetApp:
         self.root.title(Constants.WINDOW_TITLE)
         self.root.geometry(Constants.WINDOW_SIZE)
         self.root.minsize(*Constants.MIN_WINDOW_SIZE)
+
+        # Windows 性能优化
+        self._optimize_windows_performance()
 
         # 初始化组件
         self.config_manager = ConfigManager()
@@ -89,13 +93,59 @@ class CampusNetApp:
         if self.config.get("auto_login") and self.config.get("username") and self.config.get("password"):
             self.root.after(2000, self._auto_login)
 
-        # 定期更新状态
-        self._update_status()
+        # 绑定窗口大小变化事件(防抖优化) - 必须在_schedule_status_update之前初始化
+        self._resize_debounce_timer = None
+        self._RESIZE_DEBOUNCE_MS = 500  # 增加防抖时间以进一步减少resize时的更新
+        self.root.bind("<Configure>", self._on_window_configure)
+
+        # 定期更新状态（延长间隔减少资源消耗）
+        self._schedule_status_update()
 
         # 绑定关闭事件
         self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
 
         self.logger.info("校园网认证工具启动完成")
+
+    def _optimize_windows_performance(self) -> None:
+        """Windows 平台性能优化"""
+        if sys.platform != "win32":
+            return
+
+        try:
+            # 禁用 ttk 主题动画，使用更轻量的主题
+            style = ttk.Style()
+            style.theme_use("clam")
+            # 禁用动画效果以提升性能
+            style.configure(".", animation=False)
+        except Exception:
+            pass
+
+    def _on_window_configure(self, event) -> None:
+        """
+        窗口大小变化事件处理(带防抖)
+
+        Args:
+            event: Configure 事件对象
+        """
+        # 只处理根窗口的Configure事件(忽略子控件的事件)
+        if event.widget != self.root:
+            return
+
+        # 取消之前的定时器
+        if self._resize_debounce_timer:
+            self.root.after_cancel(self._resize_debounce_timer)
+
+        # 设置新的定时器 - 使用更长的防抖时间(500ms)
+        self._resize_debounce_timer = self.root.after(
+            self._RESIZE_DEBOUNCE_MS,
+            self._on_resize_finished
+        )
+
+    def _on_resize_finished(self) -> None:
+        """窗口调整完成后的处理"""
+        self._resize_debounce_timer = None
+        # 延迟更新状态,避免resize时频繁更新
+        self.root.after(100, self._check_status_async)
 
     def _create_widgets(self) -> None:
         """创建 GUI 控件"""
@@ -205,8 +255,8 @@ class CampusNetApp:
                     cooldown=self.config.get("reconnect_cooldown", 30),
                     network_checker=self.authenticator.detect_network_status,
                     login_func=lambda: self.authenticator.login(
-                        self.authenticator.username,
-                        self.authenticator.password
+                        self.authenticator.username or "",
+                        self.authenticator.password or ""
                     ),
                     on_reconnect_success=self._on_reconnect_success,
                     on_reconnect_failure=self._on_reconnect_failure
@@ -326,8 +376,9 @@ class CampusNetApp:
         self.logger.info("设置已重置")
 
     def _on_log_message(self, message: str) -> None:
-        """日志消息回调"""
-        self.root.after(0, lambda: self.logs_tab.append_log(message))
+        """日志消息回调（线程安全，由 LogsTab 内部防抖）"""
+        # append_log 内部使用 after() 保证线程安全
+        self.logs_tab.append_log(message)
 
     def _minimize_to_tray(self) -> None:
         """最小化到托盘"""
@@ -349,21 +400,31 @@ class CampusNetApp:
         self.in_tray = False
         self.logger.info("已恢复窗口")
 
-    def _update_status(self) -> None:
-        """更新状态"""
-        def check_status():
+    def _schedule_status_update(self) -> None:
+        """调度状态更新（仅当窗口可见且不在resize时更新）"""
+        # 如果正在resize，跳过本次更新
+        if self._resize_debounce_timer is not None:
+            self.root.after(10000, self._schedule_status_update)
+            return
+
+        # 只有窗口可见时才更新
+        if self.root.winfo_viewable():
+            self._check_status_async()
+
+        # 每10秒检查一次（延长间隔减少资源消耗）
+        self.root.after(10000, self._schedule_status_update)
+
+    def _check_status_async(self) -> None:
+        """异步检查状态"""
+        def check():
             try:
                 network_ok = self.authenticator.detect_network_status()
                 login_ok = self.authenticator.is_logged_in
-
                 self.root.after(0, lambda: self._update_status_ui(network_ok, login_ok))
-            except Exception as e:
-                self.logger.debug(f"检查状态失败: {e}")
+            except Exception:
+                pass  # 静默失败，避免日志刷屏
 
-        threading.Thread(target=check_status, daemon=True).start()
-
-        # 定期更新
-        self.root.after(5000, self._update_status)
+        threading.Thread(target=check, daemon=True).start()
 
     def _update_status_ui(self, network_ok: bool, login_ok: bool) -> None:
         """更新状态 UI"""

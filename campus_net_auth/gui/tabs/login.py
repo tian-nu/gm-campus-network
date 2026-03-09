@@ -7,7 +7,7 @@ import logging
 import threading
 from datetime import datetime
 from tkinter import *
-from typing import Callable, Optional
+from typing import Callable
 
 from ..widgets import LabeledEntry, StatusLabel, ActionButton, SettingGroup
 from ...utils.network_info import NetworkInfo
@@ -15,12 +15,36 @@ from ...utils.network_info import NetworkInfo
 
 class LoginTab(Frame):
     """登录标签页"""
+    
+    # 类型注解
+    logger: logging.Logger
+    on_login: Callable[[str, str], None] | None
+    on_minimize: Callable[[], None] | None
+    is_logging_in: bool
+    login_count: int
+    last_login_time: datetime | None
+    check_proxy_before_login: bool
+    _proxy_warned: bool
+    scrollable_frame: Frame
+    username_entry: LabeledEntry
+    password_entry: LabeledEntry
+    login_btn: ActionButton
+    proxy_warning_label: Label
+    minimize_btn: ActionButton
+    network_status: StatusLabel
+    login_status: StatusLabel
+    last_login_status: StatusLabel
+    login_count_status: StatusLabel
+    network_info_frame: Frame
+    ip_label: Label
+    mac_label: Label
+    message_label: Label
 
     def __init__(
         self,
         parent: Widget,
-        on_login: Optional[Callable[[str, str], None]] = None,
-        on_minimize: Optional[Callable[[], None]] = None,
+        on_login: Callable[[str, str], None] | None = None,
+        on_minimize: Callable[[], None] | None = None,
         **kwargs
     ):
         """
@@ -40,7 +64,7 @@ class LoginTab(Frame):
         # 状态
         self.is_logging_in = False
         self.login_count = 0
-        self.last_login_time: Optional[datetime] = None
+        self.last_login_time: datetime | None = None
         self.check_proxy_before_login = True  # 是否在登录前检测代理
         self._proxy_warned = False  # 是否已提示过代理警告
 
@@ -48,13 +72,49 @@ class LoginTab(Frame):
 
     def _create_widgets(self) -> None:
         """创建控件"""
-        # 主框架
-        main_frame = Frame(self, padx=30, pady=20)
-        main_frame.pack(fill=BOTH, expand=True)
+        # 创建Canvas和Scrollbar实现滚动
+        canvas = Canvas(self, bg="#f5f5f5", highlightthickness=0)
+        scrollbar = Scrollbar(self, orient=VERTICAL, command=canvas.yview)
+
+        # 可滚动的Frame
+        self.scrollable_frame = Frame(canvas, padx=30, pady=20)
+
+        # 创建window
+        canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+
+        # 配置滚动区域
+        def _configure_scroll_region(_event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        _ = self.scrollable_frame.bind("<Configure>", _configure_scroll_region)
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # 打包Canvas和Scrollbar
+        canvas.pack(side=LEFT, fill=BOTH, expand=True)
+        scrollbar.pack(side=RIGHT, fill=Y)
+
+        # 绑定鼠标滚轮事件
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
+        _ = canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        # 窗口大小改变时调整canvas宽度(延迟执行以避免性能问题)
+        def _on_canvas_configure(_event):
+            # 使用update_idletasks确保布局完成
+            canvas.update_idletasks()
+            # 获取canvas的实际宽度
+            canvas_width = canvas.winfo_width()
+            # 只在宽度大于1时才更新(避免初始化时的问题)
+            if canvas_width > 1:
+                canvas.itemconfig("all", width=canvas_width)
+
+        # 延迟绑定Configure事件,避免初始化时触发
+        _ = self.after(100, lambda: canvas.bind("<Configure>", _on_canvas_configure))
 
         # 标题
         title_label = Label(
-            main_frame,
+            self.scrollable_frame,
             text="校园网自动认证",
             font=("Microsoft YaHei UI", 20, "bold"),
             fg="#333333"
@@ -63,7 +123,7 @@ class LoginTab(Frame):
 
         # 副标题
         subtitle_label = Label(
-            main_frame,
+            self.scrollable_frame,
             text="Campus Network Authentication",
             font=("Microsoft YaHei UI", 10),
             fg="#666666"
@@ -71,7 +131,7 @@ class LoginTab(Frame):
         subtitle_label.pack(pady=(0, 30))
 
         # 登录表单
-        form_frame = Frame(main_frame)
+        form_frame = Frame(self.scrollable_frame)
         form_frame.pack(fill=X, pady=(0, 20))
 
         # 学号输入
@@ -92,7 +152,7 @@ class LoginTab(Frame):
         self.password_entry.pack(fill=X, pady=8)
 
         # 按钮区域
-        button_frame = Frame(main_frame)
+        button_frame = Frame(self.scrollable_frame)
         button_frame.pack(fill=X, pady=15)
 
         # 登录按钮
@@ -127,7 +187,7 @@ class LoginTab(Frame):
         self.minimize_btn.pack(pady=5)
 
         # 状态区域
-        status_group = SettingGroup(main_frame, title="系统状态")
+        status_group = SettingGroup(self.scrollable_frame, title="系统状态")
         status_group.pack(fill=X, pady=(15, 0))
 
         # 网络状态
@@ -184,7 +244,7 @@ class LoginTab(Frame):
 
         # 消息提示区域
         self.message_label = Label(
-            main_frame,
+            self.scrollable_frame,
             text="",
             font=("Microsoft YaHei UI", 10),
             fg="#666666",
@@ -226,10 +286,10 @@ class LoginTab(Frame):
 
         # 检测代理（仅首次提示，不影响操作）
         if self.check_proxy_before_login and not self._proxy_warned:
-            has_proxy, warning_msg = NetworkInfo.check_proxy_before_login()
+            has_proxy, _warning_msg = NetworkInfo.check_proxy_before_login()
             if has_proxy:
                 # 显示警告标签，不弹窗
-                self.proxy_warning_label.pack(pady=(5, 0))
+                _ = self.proxy_warning_label.pack(pady=(5, 0))
                 self._proxy_warned = True
                 self.logger.warning("检测到代理已开启")
 
@@ -283,10 +343,10 @@ class LoginTab(Frame):
 
     def set_credentials(self, username: str, password: str) -> None:
         """设置登录凭证"""
-        self.username_entry.set(username)
-        self.password_entry.set(password)
+        _ = self.username_entry.set(username)
+        _ = self.password_entry.set(password)
 
-    def get_credentials(self) -> tuple:
+    def get_credentials(self) -> tuple[str, str]:
         """获取登录凭证"""
         return self.username_entry.get(), self.password_entry.get()
 

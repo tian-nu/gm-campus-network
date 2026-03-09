@@ -25,3 +25,30 @@
 
 ### 状态
 - 完成时间：2026-03-08
+
+## 任务3：修复 log_file_path 未定义错误 ✅
+
+### 问题
+`_create_widgets` 方法中使用了 `log_file_path` 变量，但它是 `__init__` 中的局部变量
+
+### 解决
+将 `log_file_path` 改为 `self.log_file_path` 实例变量
+
+### 状态
+- 完成时间：2026-03-09
+
+## 任务4：修复 constants.py 缺少关键常量 【进行中】
+
+### 问题
+`network.py` 引用了以下常量但 `constants.py` 中未定义：
+- `DEFAULT_HEARTBEAT_URL`
+- `DEFAULT_HEARTBEAT_INTERVAL`
+- `DEFAULT_TIMEOUT`
+- `DEFAULT_RECONNECT_INTERVAL`
+- `DEFAULT_RECONNECT_COOLDOWN`
+
+### 解决方案
+在 `constants.py` 中添加这些缺失的常量
+
+### 状态
+- 进行中

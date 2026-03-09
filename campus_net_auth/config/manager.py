@@ -26,9 +26,9 @@ class ConfigManager:
         """
         self.config_file = config_file
         self.logger = logging.getLogger(__name__)
-        self._config: Optional[dict] = None
+        self._config: Optional[dict[str, object]] = None
 
-    def load(self) -> dict:
+    def load(self) -> dict[str, object]:
         """
         加载配置，自动合并默认值
 

@@ -1,20 +1,34 @@
 """
 日志标签页
-提供日志查看和管理界面
+提供日志查看和管理界面（性能优化版）
 """
 
 import logging
 import os
 import sys
 from tkinter import *
-from tkinter import scrolledtext, filedialog
+from tkinter import filedialog
 from typing import Optional
 
 from ..widgets import ActionButton
 
 
 class LogsTab(Frame):
-    """日志标签页"""
+    """日志标签页（轻量级实现）"""
+
+    # 最大显示行数(进一步减少以提升性能)
+    MAX_LINES = 200
+    # 日志更新防抖间隔（毫秒）
+    UPDATE_INTERVAL = 200
+
+    # 类型注解
+    logger: logging.Logger
+    log_file: str
+    log_text: Text | None
+    status_label: Label | None
+    _log_buffer: list[str]
+    _pending_update: bool
+    _line_count: int
 
     def __init__(self, parent: Widget, log_file: str = "campus_net.log", **kwargs):
         """
@@ -28,6 +42,15 @@ class LogsTab(Frame):
 
         self.logger = logging.getLogger(__name__)
         self.log_file = log_file
+        
+        # 日志缓冲区
+        self._log_buffer = []
+        self._pending_update = False
+        self._line_count = 0
+
+        # 初始化属性
+        self.log_text: Text | None = None
+        self.status_label: Label | None = None
 
         self._create_widgets()
 
@@ -44,19 +67,30 @@ class LogsTab(Frame):
             fg="#333333"
         ).pack(anchor=W, pady=(0, 10))
 
-        # 日志文本框
-        self.log_text = scrolledtext.ScrolledText(
-            main_frame,
-            wrap=WORD,
+        # 日志文本框（使用 Text + 垂直 Scrollbar，wrap=CHAR 性能更好）
+        text_frame = Frame(main_frame)
+        text_frame.pack(fill=BOTH, expand=True, pady=(0, 10))
+
+        # 垂直滚动条
+        scrollbar = Scrollbar(text_frame)
+        scrollbar.pack(side=RIGHT, fill=Y)
+
+        # Text控件使用wrap=CHAR（比WORD性能更好，且可以自动换行）
+        self.log_text = Text(
+            text_frame,
+            wrap=CHAR,  # 按字符换行，性能优于WORD，用户体验优于NONE
             font=("Consolas", 9),
             bg="#1E1E1E",
             fg="#D4D4D4",
             insertbackground="white",
             selectbackground="#264F78",
-            height=20
+            height=20,
+            yscrollcommand=scrollbar.set,
+            state=DISABLED,
+            tabs=("4c",)  # 设置tab宽度
         )
-        self.log_text.pack(fill=BOTH, expand=True, pady=(0, 10))
-        self.log_text.config(state=DISABLED)
+        self.log_text.pack(side=LEFT, fill=BOTH, expand=True)
+        scrollbar.config(command=self.log_text.yview)
 
         # 按钮区域
         button_frame = Frame(main_frame)
@@ -105,7 +139,7 @@ class LogsTab(Frame):
         # 状态栏
         self.status_label = Label(
             main_frame,
-            text="",
+            text="共 0 行日志",
             font=("Microsoft YaHei UI", 9),
             fg="#666666"
         )
@@ -113,25 +147,63 @@ class LogsTab(Frame):
 
     def append_log(self, message: str) -> None:
         """
-        添加日志消息
+        添加日志消息（带缓冲和防抖）
 
         Args:
             message: 日志消息
         """
+        # 添加到缓冲区
+        self._log_buffer.append(message)
+        
+        # 防抖更新
+        if not self._pending_update:
+            self._pending_update = True
+            self.after(self.UPDATE_INTERVAL, self._flush_log_buffer)
+
+    def _flush_log_buffer(self) -> None:
+        """刷新日志缓冲区到 UI"""
+        if not self._log_buffer:
+            self._pending_update = False
+            return
+
+        # 批量处理
+        messages = self._log_buffer
+        self._log_buffer = []
+        self._pending_update = False
+
+        # 合并消息
+        combined = "".join(messages)
+
+        # 更新 UI
         self.log_text.config(state=NORMAL)
-        self.log_text.insert(END, message)
+        self.log_text.insert(END, combined)
+        self._line_count += len(messages)
+
+        # 限制行数
+        if self._line_count > self.MAX_LINES:
+            self._trim_excess_lines()
+
         self.log_text.see(END)
         self.log_text.config(state=DISABLED)
 
-        # 更新状态
-        line_count = int(self.log_text.index('end-1c').split('.')[0])
-        self.status_label.config(text=f"共 {line_count} 行日志")
+        # 更新状态（不遍历文本）
+        self.status_label.config(text=f"共 {self._line_count} 行日志")
+
+    def _trim_excess_lines(self) -> None:
+        """裁剪多余的日志行"""
+        excess = self._line_count - self.MAX_LINES
+        if excess > 0:
+            self.log_text.delete("1.0", f"{excess + 1}.0")
+            self._line_count = self.MAX_LINES
 
     def _clear_log(self) -> None:
         """清空日志"""
         self.log_text.config(state=NORMAL)
         self.log_text.delete(1.0, END)
         self.log_text.config(state=DISABLED)
+        self._line_count = 0
+        self._log_buffer.clear()
+        self.status_label.config(text="共 0 行日志")
         self._show_status("✓ 日志已清空", "success")
         self.logger.info("日志显示已清空")
 
@@ -186,17 +258,18 @@ class LogsTab(Frame):
         try:
             if os.path.exists(self.log_file):
                 with open(self.log_file, "r", encoding="utf-8") as f:
-                    # 只读取最后 1000 行
+                    # 只读取最后 MAX_LINES 行
                     lines = f.readlines()
-                    recent_lines = lines[-1000:] if len(lines) > 1000 else lines
+                    recent_lines = lines[-self.MAX_LINES:] if len(lines) > self.MAX_LINES else lines
 
                 self.log_text.config(state=NORMAL)
                 self.log_text.delete(1.0, END)
                 self.log_text.insert(END, "".join(recent_lines))
                 self.log_text.see(END)
                 self.log_text.config(state=DISABLED)
-
-                self.status_label.config(text=f"已加载 {len(recent_lines)} 行日志")
+                
+                self._line_count = len(recent_lines)
+                self.status_label.config(text=f"已加载 {self._line_count} 行日志")
             else:
                 self.status_label.config(text="日志文件不存在")
         except Exception as e:

@@ -1,6 +1,12 @@
 # 校园网自动认证工具 v2.0
 
+[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
 模块化重构版本，代码结构清晰，易于维护和扩展。
+
+> ⚠️ **注意**：本项目仅供学习和研究使用，请遵守学校网络使用规定。
 
 ## 功能特点
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-校园网自动认证工具 v2.0
+校园网自动认证工具 v1.0
 模块化重构版本
 
 功能特点：
@@ -18,6 +18,14 @@
 
 import sys
 import os
+
+# Windows 高 DPI 支持（必须在创建 Tk 实例之前）
+if sys.platform == "win32":
+    try:
+        from ctypes import windll
+        windll.shcore.SetProcessDpiAwareness(1)  # PROCESS_SYSTEM_DPI_AWARE
+    except Exception:
+        pass
 
 # 确保模块路径正确
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

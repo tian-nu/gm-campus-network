@@ -5,22 +5,51 @@
 
 import logging
 from tkinter import *
-from typing import Callable, Optional
+from typing import Callable
 
 from ..widgets import (
-    ScrollableFrame, SettingCheckbox, SettingSpinbox,
-    ActionButton, SettingGroup, LabeledEntry
+    SettingCheckbox, SettingSpinbox,
+    ActionButton, SettingGroup
 )
 
 
 class SettingsTab(Frame):
     """设置标签页"""
+    
+    # 类型注解
+    logger: logging.Logger
+    on_save: Callable[[dict], None] | None
+    on_reset: Callable[[], None] | None
+    scrollable_frame: Frame | None
+    startup_check: SettingCheckbox | None
+    auto_login_check: SettingCheckbox | None
+    minimize_startup_check: SettingCheckbox | None
+    remember_password_check: SettingCheckbox | None
+    login_success_notify_check: SettingCheckbox | None
+    login_fail_notify_check: SettingCheckbox | None
+    silent_mode_check: SettingCheckbox | None
+    check_proxy_before_login_check: SettingCheckbox | None
+    timeout_spinbox: SettingSpinbox | None
+    max_retries_spinbox: SettingSpinbox | None
+    enable_heartbeat_check: SettingCheckbox | None
+    heartbeat_interval_spinbox: SettingSpinbox | None
+    heartbeat_url_var: StringVar | None
+    enable_reconnect_check: SettingCheckbox | None
+    reconnect_interval_spinbox: SettingSpinbox | None
+    reconnect_cooldown_spinbox: SettingSpinbox | None
+    debug_mode_check: SettingCheckbox | None
+    verbose_log_check: SettingCheckbox | None
+    auto_clean_log_check: SettingCheckbox | None
+    log_retention_spinbox: SettingSpinbox | None
+    enable_auto_retry_after_ban_check: SettingCheckbox | None
+    default_ban_duration_spinbox: SettingSpinbox | None
+    status_label: Label | None
 
     def __init__(
         self,
         parent: Widget,
-        on_save: Optional[Callable[[dict], None]] = None,
-        on_reset: Optional[Callable[[], None]] = None,
+        on_save: Callable[[dict], None] | None = None,
+        on_reset: Callable[[], None] | None = None,
         **kwargs
     ):
         """
@@ -37,46 +66,95 @@ class SettingsTab(Frame):
         self.on_save = on_save
         self.on_reset = on_reset
 
+        # 初始化所有属性
+        self.scrollable_frame: Frame | None = None
+        self.startup_check: SettingCheckbox | None = None
+        self.auto_login_check: SettingCheckbox | None = None
+        self.minimize_startup_check: SettingCheckbox | None = None
+        self.remember_password_check: SettingCheckbox | None = None
+        self.login_success_notify_check: SettingCheckbox | None = None
+        self.login_fail_notify_check: SettingCheckbox | None = None
+        self.silent_mode_check: SettingCheckbox | None = None
+        self.check_proxy_before_login_check: SettingCheckbox | None = None
+        self.timeout_spinbox: SettingSpinbox | None = None
+        self.max_retries_spinbox: SettingSpinbox | None = None
+        self.enable_heartbeat_check: SettingCheckbox | None = None
+        self.heartbeat_interval_spinbox: SettingSpinbox | None = None
+        self.heartbeat_url_var: StringVar | None = None
+        self.enable_reconnect_check: SettingCheckbox | None = None
+        self.reconnect_interval_spinbox: SettingSpinbox | None = None
+        self.reconnect_cooldown_spinbox: SettingSpinbox | None = None
+        self.debug_mode_check: SettingCheckbox | None = None
+        self.verbose_log_check: SettingCheckbox | None = None
+        self.auto_clean_log_check: SettingCheckbox | None = None
+        self.log_retention_spinbox: SettingSpinbox | None = None
+        self.enable_auto_retry_after_ban_check: SettingCheckbox | None = None
+        self.default_ban_duration_spinbox: SettingSpinbox | None = None
+        self.status_label: Label | None = None
+
         self._create_widgets()
 
     def _create_widgets(self) -> None:
         """创建控件"""
-        # 可滚动框架
-        scrollable = ScrollableFrame(self)
-        content = scrollable.scrollable_frame
+        # 创建Canvas和Scrollbar实现滚动
+        canvas = Canvas(self, bg="#f5f5f5", highlightthickness=0)
+        scrollbar = Scrollbar(self, orient=VERTICAL, command=canvas.yview)
 
-        # 内容框架
-        main_frame = Frame(content, padx=20, pady=15)
-        main_frame.pack(fill=BOTH, expand=True)
+        # 可滚动的Frame
+        self.scrollable_frame = Frame(canvas, padx=20, pady=15)
+
+        # 配置滚动
+        _ = self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        _ = canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw", width=canvas.winfo_width())
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        # 打包Canvas和Scrollbar
+        canvas.pack(side=LEFT, fill=BOTH, expand=True)
+        scrollbar.pack(side=RIGHT, fill=Y)
 
         # 标题
         Label(
-            main_frame,
+            self.scrollable_frame,
             text="设置",
             font=("Microsoft YaHei UI", 16, "bold"),
             fg="#333333"
         ).pack(anchor=W, pady=(0, 15))
 
         # 启动设置
-        self._create_startup_settings(main_frame)
+        self._create_startup_settings(self.scrollable_frame)
 
         # 登录设置
-        self._create_login_settings(main_frame)
+        self._create_login_settings(self.scrollable_frame)
 
         # 网络设置
-        self._create_network_settings(main_frame)
+        self._create_network_settings(self.scrollable_frame)
 
         # 心跳设置
-        self._create_heartbeat_settings(main_frame)
+        self._create_heartbeat_settings(self.scrollable_frame)
 
         # 重连设置
-        self._create_reconnect_settings(main_frame)
+        self._create_reconnect_settings(self.scrollable_frame)
 
         # 高级设置
-        self._create_advanced_settings(main_frame)
+        self._create_advanced_settings(self.scrollable_frame)
 
         # 按钮区域
-        self._create_buttons(main_frame)
+        self._create_buttons(self.scrollable_frame)
+
+        # 绑定鼠标滚轮事件
+        def _on_mousewheel(event):
+            canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+
+        _ = canvas.bind_all("<MouseWheel>", _on_mousewheel)
+
+        # 窗口大小改变时调整canvas宽度
+        def _on_canvas_configure(_event):
+            canvas.itemconfig("all", width=_event.width)
+
+        _ = canvas.bind("<Configure>", _on_canvas_configure)
 
     def _create_startup_settings(self, parent: Widget) -> None:
         """创建启动设置"""
@@ -100,27 +178,19 @@ class SettingsTab(Frame):
         self.remember_password_check = SettingCheckbox(group, text="记住密码")
         self.remember_password_check.pack(anchor=W, pady=3)
 
-        row1 = Frame(group)
-        row1.pack(fill=X, pady=3)
+        # 合并通知设置
+        self.login_success_notify_check = SettingCheckbox(group, text="登录成功提示")
+        self.login_success_notify_check.pack(anchor=W, pady=3)
 
-        self.login_success_notify_check = SettingCheckbox(row1, text="登录成功提示")
-        self.login_success_notify_check.pack(side=LEFT)
+        self.login_fail_notify_check = SettingCheckbox(group, text="登录失败提示")
+        self.login_fail_notify_check.pack(anchor=W, pady=3)
 
-        self.login_fail_notify_check = SettingCheckbox(row1, text="登录失败提示")
-        self.login_fail_notify_check.pack(side=LEFT, padx=(20, 0))
-        
-        row2 = Frame(group)
-        row2.pack(fill=X, pady=3)
-        
-        self.silent_mode_check = SettingCheckbox(row2, text="静默模式（仅异常通知）")
-        self.silent_mode_check.pack(side=LEFT)
-        
+        self.silent_mode_check = SettingCheckbox(group, text="静默模式（仅异常通知）")
+        self.silent_mode_check.pack(anchor=W, pady=3)
+
         # 代理检测设置
-        row3 = Frame(group)
-        row3.pack(fill=X, pady=3)
-        
-        self.check_proxy_before_login_check = SettingCheckbox(row3, text="登录前检测代理")
-        self.check_proxy_before_login_check.pack(side=LEFT)
+        self.check_proxy_before_login_check = SettingCheckbox(group, text="登录前检测代理")
+        self.check_proxy_before_login_check.pack(anchor=W, pady=3)
 
     def _create_network_settings(self, parent: Widget) -> None:
         """创建网络设置"""
@@ -206,45 +276,36 @@ class SettingsTab(Frame):
         group = SettingGroup(parent, title="高级设置")
         group.pack(fill=X, pady=(0, 10))
 
-        row1 = Frame(group)
-        row1.pack(fill=X, pady=3)
+        self.debug_mode_check = SettingCheckbox(group, text="调试模式")
+        self.debug_mode_check.pack(anchor=W, pady=3)
 
-        self.debug_mode_check = SettingCheckbox(row1, text="调试模式")
-        self.debug_mode_check.pack(side=LEFT, padx=(0, 20))
+        self.verbose_log_check = SettingCheckbox(group, text="详细日志")
+        self.verbose_log_check.pack(anchor=W, pady=3)
 
-        self.verbose_log_check = SettingCheckbox(row1, text="详细日志")
-        self.verbose_log_check.pack(side=LEFT)
-
-        row2 = Frame(group)
-        row2.pack(fill=X, pady=3)
-
-        self.auto_clean_log_check = SettingCheckbox(row2, text="自动清理日志")
-        self.auto_clean_log_check.pack(side=LEFT, padx=(0, 20))
+        self.auto_clean_log_check = SettingCheckbox(group, text="自动清理日志")
+        self.auto_clean_log_check.pack(anchor=W, pady=3)
 
         self.log_retention_spinbox = SettingSpinbox(
-            row2,
+            group,
             label_text="日志保留天数:",
             min_val=1,
             max_val=30,
             default_val=7
         )
-        self.log_retention_spinbox.pack(side=LEFT)
-        
-        # 添加封禁处理设置
-        row3 = Frame(group)
-        row3.pack(fill=X, pady=3)
-        
-        self.enable_auto_retry_after_ban_check = SettingCheckbox(row3, text="封禁后自动重试")
-        self.enable_auto_retry_after_ban_check.pack(side=LEFT, padx=(0, 20))
-        
+        self.log_retention_spinbox.pack(anchor=W, pady=3)
+
+        # 封禁处理设置
+        self.enable_auto_retry_after_ban_check = SettingCheckbox(group, text="封禁后自动重试")
+        self.enable_auto_retry_after_ban_check.pack(anchor=W, pady=3)
+
         self.default_ban_duration_spinbox = SettingSpinbox(
-            row3,
+            group,
             label_text="默认封禁时长(分钟):",
             min_val=1,
             max_val=120,
             default_val=30
         )
-        self.default_ban_duration_spinbox.pack(side=LEFT)
+        self.default_ban_duration_spinbox.pack(anchor=W, pady=3)
 
     def _create_buttons(self, parent: Widget) -> None:
         """创建按钮区域"""
@@ -295,7 +356,7 @@ class SettingsTab(Frame):
         # 3秒后清除
         self.after(3000, lambda: self.status_label.config(text=""))
 
-    def get_config(self) -> dict:
+    def get_config(self) -> dict[str, object]:
         """获取当前配置"""
         return {
             # 启动设置
