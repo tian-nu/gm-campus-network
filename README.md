@@ -41,13 +41,13 @@
 │   │       ├── settings.py     # 设置页
 │   │       └── logs.py         # 日志页
 │   └── utils/                  # 工具模块
-        ├── logger.py           # 日志配置
-        └── network_info.py     # 网络信息
-├── tests/                      # 测试模块
-│   ├── test_authenticator.py   # 认证器测试
-│   ├── test_config.py          # 配置管理测试
-│   ├── test_network.py         # 网络功能测试
-│   └── ...                     # 其他测试文件
+│       ├── logger.py           # 日志配置
+│       └── network_info.py     # 网络信息
+└── tests/                      # 测试模块
+    ├── test_authenticator.py   # 认证器测试
+    ├── test_config.py          # 配置管理测试
+    ├── test_network.py         # 网络功能测试
+    └── ...                     # 其他测试文件
 ```
 
 ## 安装
