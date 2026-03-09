@@ -1,6 +1,0 @@
-requests
-beautifulsoup4
-PyQt5
-pystray
-cryptography
-pillow
