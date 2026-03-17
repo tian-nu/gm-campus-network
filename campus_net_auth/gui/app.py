@@ -382,23 +382,43 @@ class CampusNetApp:
 
     def _minimize_to_tray(self) -> None:
         """最小化到托盘"""
-        if self.tray.is_available:
-            self.root.withdraw()
-            self.tray.start()
-            self.in_tray = True
-            self.logger.info("已最小化到系统托盘")
-        else:
-            self.root.iconify()
-            self.logger.info("已最小化到任务栏")
+        try:
+            if self.tray.is_available:
+                self.root.withdraw()
+                success = self.tray.start()
+                if success:
+                    self.in_tray = True
+                    self.logger.info("已最小化到系统托盘")
+                else:
+                    # 托盘启动失败，恢复窗口
+                    self.root.deiconify()
+                    self.logger.warning("托盘启动失败，已恢复窗口")
+            else:
+                self.root.iconify()
+                self.logger.info("已最小化到任务栏（托盘不可用）")
+        except Exception as e:
+            self.logger.error(f"最小化到托盘失败: {e}")
+            # 确保窗口可见
+            try:
+                self.root.deiconify()
+            except:
+                pass
 
     def _restore_window(self) -> None:
         """恢复窗口"""
-        self.tray.stop()
-        self.root.deiconify()
-        self.root.lift()
-        self.root.focus_force()
-        self.in_tray = False
-        self.logger.info("已恢复窗口")
+        try:
+            self.tray.stop()
+        except Exception as e:
+            self.logger.debug(f"停止托盘时出错: {e}")
+        
+        try:
+            self.root.deiconify()
+            self.root.lift()
+            self.root.focus_force()
+            self.in_tray = False
+            self.logger.info("已恢复窗口")
+        except Exception as e:
+            self.logger.error(f"恢复窗口失败: {e}")
 
     def _schedule_status_update(self) -> None:
         """调度状态更新（仅当窗口可见且不在resize时更新）"""

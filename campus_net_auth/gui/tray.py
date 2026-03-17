@@ -76,19 +76,36 @@ class SystemTray:
         }
         color = colors.get(status or self._current_status, "#2196F3")
 
-        # 创建图标
-        image = Image.new("RGB", (size, size), color)
+        # 创建图标 - 使用RGBA模式支持透明度
+        image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
         draw = ImageDraw.Draw(image)
 
-        # 绘制简单的网络图标
-        margin = size // 4
+        # 将十六进制颜色转换为RGB
+        def hex_to_rgb(hex_color):
+            hex_color = hex_color.lstrip('#')
+            return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+
+        rgb_color = hex_to_rgb(color)
+
+        # 绘制圆形背景
+        margin = size // 8
         draw.ellipse(
             [margin, margin, size - margin, size - margin],
-            fill="white"
+            fill=rgb_color + (255,)  # 添加alpha通道
         )
+
+        # 绘制内部白色圆圈
+        inner_margin = margin + size // 6
         draw.ellipse(
-            [margin + 8, margin + 8, size - margin - 8, size - margin - 8],
-            fill=color
+            [inner_margin, inner_margin, size - inner_margin, size - inner_margin],
+            fill=(255, 255, 255, 255)
+        )
+
+        # 绘制中心颜色圆点
+        center_margin = inner_margin + size // 10
+        draw.ellipse(
+            [center_margin, center_margin, size - center_margin, size - center_margin],
+            fill=rgb_color + (255,)
         )
 
         return image
@@ -127,16 +144,17 @@ class SystemTray:
             )
 
             # 创建图标
+            icon_image = self._create_icon_image()
             self._icon = pystray.Icon(
                 "campus_net_auth",
-                self._create_icon_image(),
+                icon_image,
                 self.title,
                 menu
             )
 
             # 在后台线程运行
             self._thread = threading.Thread(
-                target=self._icon.run,
+                target=self._run_icon,
                 name="TrayThread",
                 daemon=True
             )
@@ -148,10 +166,22 @@ class SystemTray:
 
         except Exception as e:
             self.logger.error(f"启动系统托盘失败: {e}")
+            import traceback
+            self.logger.error(traceback.format_exc())
             return False
+
+    def _run_icon(self):
+        """运行托盘图标（在独立线程中）"""
+        try:
+            self._icon.run()
+        except Exception as e:
+            self.logger.error(f"托盘运行出错: {e}")
 
     def stop(self) -> None:
         """停止系统托盘"""
+        if not self._is_running:
+            return
+
         if self._icon is not None:
             try:
                 self._icon.stop()

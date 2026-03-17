@@ -26,6 +26,7 @@ class AppConfig:
     login_fail_notify: bool = True
     silent_mode: bool = True  # 静默模式（仅异常通知）
     check_proxy_before_login: bool = True  # 登录前检测代理
+    strict_proxy_check: bool = True  # 严格代理检测（检测到代理时阻止登录）
 
     # 网络设置
     timeout: int = 10
@@ -88,6 +89,7 @@ DEFAULT_CONFIG = {
     "login_fail_notify": True,
     "silent_mode": True,  # 静默模式（仅异常通知）
     "check_proxy_before_login": True,  # 登录前检测代理
+    "strict_proxy_check": True,  # 严格代理检测（检测到代理时阻止登录）
 
     # 网络设置
     "timeout": 10,

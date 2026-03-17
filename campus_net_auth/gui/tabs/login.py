@@ -10,7 +10,7 @@ from tkinter import *
 from typing import Callable
 
 from ..widgets import LabeledEntry, StatusLabel, ActionButton, SettingGroup
-from ...utils.network_info import NetworkInfo
+from ...utils.network_info import NetworkInfo, get_proxy_detector
 
 
 class LoginTab(Frame):
@@ -338,6 +338,12 @@ class LoginTab(Frame):
         else:
             if "网络已连通" in message:
                 self._show_message(message, "info")
+            elif "代理" in message or "VPN" in message:
+                # 代理/VPN阻止的特殊显示
+                self._show_message(message, "warning")
+                # 显示代理警告标签
+                self.proxy_warning_label.pack(pady=(5, 0))
+                self._proxy_warned = True
             else:
                 self._show_message(message, "error")
 

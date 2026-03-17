@@ -29,6 +29,7 @@ class SettingsTab(Frame):
     login_fail_notify_check: SettingCheckbox | None
     silent_mode_check: SettingCheckbox | None
     check_proxy_before_login_check: SettingCheckbox | None
+    strict_proxy_check_check: SettingCheckbox | None
     timeout_spinbox: SettingSpinbox | None
     max_retries_spinbox: SettingSpinbox | None
     enable_heartbeat_check: SettingCheckbox | None
@@ -74,8 +75,9 @@ class SettingsTab(Frame):
         self.remember_password_check: SettingCheckbox | None = None
         self.login_success_notify_check: SettingCheckbox | None = None
         self.login_fail_notify_check: SettingCheckbox | None = None
-        self.silent_mode_check: SettingCheckbox | None = None
-        self.check_proxy_before_login_check: SettingCheckbox | None = None
+        self.silent_mode_check: SettingCheckbox | None
+        self.check_proxy_before_login_check: SettingCheckbox | None
+        self.strict_proxy_check_check: SettingCheckbox | None
         self.timeout_spinbox: SettingSpinbox | None = None
         self.max_retries_spinbox: SettingSpinbox | None = None
         self.enable_heartbeat_check: SettingCheckbox | None = None
@@ -191,6 +193,10 @@ class SettingsTab(Frame):
         # 代理检测设置
         self.check_proxy_before_login_check = SettingCheckbox(group, text="登录前检测代理")
         self.check_proxy_before_login_check.pack(anchor=W, pady=3)
+
+        # 严格代理检测模式
+        self.strict_proxy_check_check = SettingCheckbox(group, text="严格代理检测（检测到代理时阻止登录）")
+        self.strict_proxy_check_check.pack(anchor=W, pady=3)
 
     def _create_network_settings(self, parent: Widget) -> None:
         """创建网络设置"""
@@ -370,6 +376,7 @@ class SettingsTab(Frame):
             "login_fail_notify": self.login_fail_notify_check.get(),
             "silent_mode": self.silent_mode_check.get(),
             "check_proxy_before_login": self.check_proxy_before_login_check.get(),
+            "strict_proxy_check": self.strict_proxy_check_check.get(),
 
             # 网络设置
             "timeout": self.timeout_spinbox.get(),
@@ -409,6 +416,7 @@ class SettingsTab(Frame):
         self.login_fail_notify_check.set(config.get("login_fail_notify", True))
         self.silent_mode_check.set(config.get("silent_mode", True))
         self.check_proxy_before_login_check.set(config.get("check_proxy_before_login", True))
+        self.strict_proxy_check_check.set(config.get("strict_proxy_check", True))
 
         # 网络设置
         self.timeout_spinbox.set(config.get("timeout", 10))

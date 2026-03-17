@@ -11,7 +11,7 @@ from typing import Callable, Optional
 import requests
 
 from .constants import Constants
-from ..utils.network_info import NetworkInfo
+from ..utils.network_info import NetworkInfo, get_proxy_detector
 
 
 class HeartbeatService:
@@ -105,8 +105,25 @@ class HeartbeatService:
         """心跳工作线程"""
         # 禁用代理，避免因代理IP不一致导致封禁
         no_proxy = {"http": None, "https": None}
-        
+
+        # 代理检测器
+        proxy_detector = get_proxy_detector()
+        proxy_check_interval = 10  # 每10次心跳检查一次代理状态
+        check_counter = 0
+
         while not self._stop_event.is_set():
+            # 定期检查代理状态
+            check_counter += 1
+            if check_counter >= proxy_check_interval:
+                check_counter = 0
+                should_block, block_reason = proxy_detector.should_block_campus_login()
+                if should_block:
+                    self.logger.warning(f"心跳服务检测到代理/VPN，自动停止: {block_reason}")
+                    self._is_running = False
+                    if self.on_failure:
+                        self.on_failure(Exception(f"检测到代理/VPN: {block_reason}"))
+                    return
+
             try:
                 response = requests.get(self.url, timeout=self.timeout, proxies=no_proxy)
                 if response.status_code in [200, 204]:
@@ -257,10 +274,29 @@ class ReconnectService:
 
     def _worker(self) -> None:
         """重连工作线程"""
+        # 代理检测器
+        proxy_detector = get_proxy_detector()
+        proxy_check_counter = 0
+        proxy_check_interval = 5  # 每5次循环检查一次代理状态
+
         while not self._stop_event.is_set():
             try:
                 current_time = time.time()
-                
+
+                # 定期检查代理状态
+                proxy_check_counter += 1
+                if proxy_check_counter >= proxy_check_interval:
+                    proxy_check_counter = 0
+                    should_block, block_reason = proxy_detector.should_block_campus_login()
+                    if should_block:
+                        self.logger.warning(f"重连服务检测到代理/VPN，暂停重连: {block_reason}")
+                        # 通知上层代理阻止状态
+                        if self.on_reconnect_failure:
+                            self.on_reconnect_failure(f"检测到代理/VPN，重连已暂停: {block_reason}")
+                        # 等待一段时间再检查
+                        self._stop_event.wait(self.check_interval)
+                        continue
+
                 # 检测IP变化
                 current_ip = NetworkInfo.get_ip_address()
                 if self._last_ip and current_ip != self._last_ip:
@@ -283,7 +319,7 @@ class ReconnectService:
                                 self.failure_count += 1
                                 self.logger.error(f"IP变化后重新认证失败: {message}")
                 self._last_ip = current_ip
-                
+
                 # 检查是否处于封禁期间
                 if current_time < self._ban_end_time:
                     remaining_time = self._ban_end_time - current_time
@@ -296,13 +332,13 @@ class ReconnectService:
                 # 检测网络状态
                 if not self.network_checker():
                     self.logger.warning("检测到网络断开")
-                    
+
                     # 网络异常时缩短检测间隔
                     self._adjust_interval_on_failure()
 
                     # 使用指数退避计算实际冷却时间
                     effective_cooldown = max(self.cooldown, self._current_backoff)
-                    
+
                     # 检查冷却时间
                     if current_time - self._last_attempt_time >= effective_cooldown:
                         self._last_attempt_time = current_time
@@ -323,10 +359,10 @@ class ReconnectService:
                             else:
                                 self.failure_count += 1
                                 self.logger.error(f"重连失败: {message}")
-                                
+
                                 # 增加退避时间
                                 self._increment_backoff()
-                                
+
                                 # 检查是否是封禁消息
                                 if self.enable_auto_retry_after_ban and ("封禁" in message or "禁止登录" in message):
                                     # 提取封禁时长，默认使用配置的时长
@@ -336,11 +372,11 @@ class ReconnectService:
                                         match = re.search(r'(\d+)分钟', message)
                                         if match:
                                             ban_duration = int(match.group(1)) * 60
-                                    
+
                                     self._ban_end_time = current_time + ban_duration
                                     self.reconnect_count = 0  # 重置重连计数器
                                     self.logger.info(f"检测到账号封禁，将在 {ban_duration} 秒后自动重试")
-                                
+
                                 if self.on_reconnect_failure:
                                     self.on_reconnect_failure(message)
                         except Exception as e:

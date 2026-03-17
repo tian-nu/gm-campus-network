@@ -14,7 +14,7 @@ from urllib.parse import urlparse, parse_qs, urlencode, urljoin
 import requests
 
 from .constants import Constants
-from ..utils.network_info import NetworkInfo
+from ..utils.network_info import NetworkInfo, get_proxy_detector
 
 
 @dataclass
@@ -160,6 +160,15 @@ class CampusNetAuthenticator:
         self.login_count += 1
 
         self.logger.info(f"开始登录，用户: {self.username}，第 {self.login_count} 次")
+
+        # 检查代理/VPN状态 - 如果检测到代理可能代理校园网，阻止登录
+        if self.config.get("strict_proxy_check", True):
+            proxy_detector = get_proxy_detector()
+            should_block, block_reason = proxy_detector.should_block_campus_login()
+
+            if should_block:
+                self.logger.warning(f"检测到代理/VPN，阻止登录: {block_reason}")
+                return False, f"🚫 检测到代理/VPN已开启\n\n{block_reason}\n\n请关闭代理后再登录校园网，否则可能导致账号被封禁！"
 
         # 先检查网络状态
         if self.detect_network_status():
