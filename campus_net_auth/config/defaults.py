@@ -60,6 +60,10 @@ class AppConfig:
     min_backoff_seconds: int = 1  # 最小退避时间（秒）
     max_backoff_seconds: int = 30  # 最大退避时间（秒）
 
+    # 网络监听器设置
+    enable_network_monitor: bool = True  # 启用网络变化监听
+    network_monitor_interval: float = 2.0  # 监听检测间隔（秒）
+
     def to_dict(self) -> dict:
         """转换为字典"""
         return asdict(self)
@@ -121,5 +125,9 @@ DEFAULT_CONFIG = {
     # 指数退避设置
     "enable_exponential_backoff": True,
     "min_backoff_seconds": 1,
-    "max_backoff_seconds": 30
+    "max_backoff_seconds": 30,
+
+    # 网络监听器设置
+    "enable_network_monitor": True,  # 启用网络变化监听
+    "network_monitor_interval": 2.0  # 监听检测间隔（秒）
 }

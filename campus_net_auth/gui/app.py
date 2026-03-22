@@ -16,6 +16,7 @@ from ..core.constants import Constants
 from ..config.manager import ConfigManager
 from ..utils.logger import setup_logging, add_gui_handler, remove_handler
 from ..utils.network_info import NetworkInfo
+from ..utils.network_monitor import NetworkMonitor, NetworkEventHandler, NetworkEvent
 
 from .tabs.login import LoginTab
 from .tabs.settings import SettingsTab
@@ -58,6 +59,10 @@ class CampusNetApp:
         self.heartbeat_service: Optional[HeartbeatService] = None
         self.reconnect_service: Optional[ReconnectService] = None
         self.watchdog_service: Optional[WatchdogService] = None
+
+        # 初始化网络监听器
+        self.network_monitor: Optional[NetworkMonitor] = None
+        self.network_event_handler: Optional[NetworkEventHandler] = None
 
         # 初始化托盘
         self.tray = SystemTray(
@@ -200,7 +205,12 @@ class CampusNetApp:
 
     def _on_login(self, username: str, password: str) -> None:
         """登录回调"""
-        success, message = self.authenticator.login(username, password)
+        try:
+            success, message = self.authenticator.login(username, password)
+        except Exception as e:
+            self.logger.error(f"登录过程异常: {e}")
+            success = False
+            message = f"登录异常: {str(e)}"
 
         # 在主线程更新 UI
         self.root.after(0, lambda: self._on_login_finished(success, message))
@@ -234,6 +244,9 @@ class CampusNetApp:
 
             # 启动服务
             self._start_services()
+
+            # 启动网络监听器
+            self._start_network_monitor()
 
     def _start_services(self) -> None:
         """启动后台服务"""
@@ -298,6 +311,68 @@ class CampusNetApp:
             self.heartbeat_service.stop()
         if self.reconnect_service:
             self.reconnect_service.stop()
+        # 停止网络监听器
+        self._stop_network_monitor()
+
+    def _start_network_monitor(self) -> None:
+        """启动网络变化监听器"""
+        if not self.config.get("enable_network_monitor", True):
+            self.logger.info("网络监听器已禁用")
+            return
+
+        if self.network_monitor is None:
+            # 创建事件处理器
+            self.network_event_handler = NetworkEventHandler(
+                authenticator=self.authenticator,
+                reconnect_service=self.reconnect_service,
+                on_reconnect_required=self._on_network_reconnect_required
+            )
+
+            # 创建网络监听器
+            self.network_monitor = NetworkMonitor(
+                on_event=self._on_network_event,
+                check_interval=self.config.get("network_monitor_interval", 2.0)
+            )
+
+        self.network_monitor.start()
+        self.logger.info("网络变化监听器已启动")
+
+    def _stop_network_monitor(self) -> None:
+        """停止网络变化监听器"""
+        if self.network_monitor:
+            self.network_monitor.stop()
+            self.logger.info("网络变化监听器已停止")
+
+    def _on_network_event(self, event: NetworkEvent) -> None:
+        """网络事件回调"""
+        # 在主线程处理事件
+        self.root.after(0, lambda: self._handle_network_event(event))
+
+    def _handle_network_event(self, event: NetworkEvent) -> None:
+        """在主线程处理网络事件"""
+        if self.network_event_handler:
+            self.network_event_handler.handle_event(event)
+
+    def _on_network_reconnect_required(self) -> None:
+        """网络事件触发重新连接"""
+        self.logger.info("网络变化触发重新认证")
+
+        # 如果当前已登录，尝试重新认证
+        if self.authenticator.username and self.authenticator.password:
+            threading.Thread(
+                target=lambda: self._on_login(
+                    self.authenticator.username,
+                    self.authenticator.password
+                ),
+                daemon=True
+            ).start()
+
+            # 更新UI状态
+            self.root.after(0, lambda: self.login_tab.on_login_started())
+
+            # 托盘通知
+            if self.in_tray:
+                self.tray.update_status(SystemTray.STATUS_RECONNECTING, "网络变化，重新认证中")
 
     def _on_service_restart(self, service_name: str) -> None:
         """服务重启回调"""
@@ -321,6 +396,9 @@ class CampusNetApp:
         # 更新托盘状态
         if self.in_tray:
             self.tray.update_status(SystemTray.STATUS_RECONNECTING)
+        
+        # 更新登录标签页状态，确保登录按钮不会一直显示"登录中"
+        self.root.after(0, lambda: self.login_tab.on_login_finished(False, message))
 
     def _on_save_settings(self, settings: dict) -> None:
         """保存设置回调"""
@@ -358,6 +436,23 @@ class CampusNetApp:
                 settings.get("min_backoff_seconds", 1),
                 settings.get("max_backoff_seconds", 30)
             )
+
+        # 更新网络监听器配置
+        if self.network_monitor:
+            if settings.get("enable_network_monitor", True):
+                # 如果禁用了，先停止
+                if not settings.get("enable_network_monitor", True):
+                    self._stop_network_monitor()
+                # 如果间隔变化了，更新间隔
+                new_interval = settings.get("network_monitor_interval", 2.0)
+                if hasattr(self.network_monitor, 'check_interval'):
+                    self.network_monitor.check_interval = new_interval
+            else:
+                self._stop_network_monitor()
+        else:
+            # 如果之前没有启动，现在启用了，且已经登录，则启动
+            if settings.get("enable_network_monitor", True) and self.authenticator.is_logged_in:
+                self._start_network_monitor()
 
         # 重新配置日志
         setup_logging(settings.get("debug_mode", False), Constants.LOG_FILE)

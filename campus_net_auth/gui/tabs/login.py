@@ -374,3 +374,9 @@ class LoginTab(Frame):
         """更新网络信息"""
         self.ip_label.config(text=f"IP: {ip}")
         self.mac_label.config(text=f"MAC: {mac}")
+
+    def on_login_started(self) -> None:
+        """登录开始回调"""
+        if not self.is_logging_in:
+            self.is_logging_in = True
+            self.login_btn.set_loading(True, "登录中...")

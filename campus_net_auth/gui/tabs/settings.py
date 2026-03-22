@@ -44,6 +44,8 @@ class SettingsTab(Frame):
     log_retention_spinbox: SettingSpinbox | None
     enable_auto_retry_after_ban_check: SettingCheckbox | None
     default_ban_duration_spinbox: SettingSpinbox | None
+    enable_network_monitor_check: SettingCheckbox | None
+    network_monitor_interval_spinbox: SettingSpinbox | None
     status_label: Label | None
 
     def __init__(
@@ -92,6 +94,8 @@ class SettingsTab(Frame):
         self.log_retention_spinbox: SettingSpinbox | None = None
         self.enable_auto_retry_after_ban_check: SettingCheckbox | None = None
         self.default_ban_duration_spinbox: SettingSpinbox | None = None
+        self.enable_network_monitor_check: SettingCheckbox | None = None
+        self.network_monitor_interval_spinbox: SettingSpinbox | None = None
         self.status_label: Label | None = None
 
         self._create_widgets()
@@ -142,6 +146,9 @@ class SettingsTab(Frame):
 
         # 高级设置
         self._create_advanced_settings(self.scrollable_frame)
+
+        # 网络监听设置
+        self._create_network_monitor_settings(self.scrollable_frame)
 
         # 按钮区域
         self._create_buttons(self.scrollable_frame)
@@ -313,6 +320,26 @@ class SettingsTab(Frame):
         )
         self.default_ban_duration_spinbox.pack(anchor=W, pady=3)
 
+    def _create_network_monitor_settings(self, parent: Widget) -> None:
+        """创建网络监听设置"""
+        group = SettingGroup(parent, title="网络变化监听")
+        group.pack(fill=X, pady=(0, 10))
+
+        self.enable_network_monitor_check = SettingCheckbox(
+            group,
+            text="启用网络变化监听（有线/无线切换、休眠唤醒时自动重连）"
+        )
+        self.enable_network_monitor_check.pack(anchor=W, pady=3)
+
+        self.network_monitor_interval_spinbox = SettingSpinbox(
+            group,
+            label_text="检测间隔 (秒):",
+            min_val=1,
+            max_val=10,
+            default_val=2
+        )
+        self.network_monitor_interval_spinbox.pack(anchor=W, pady=3)
+
     def _create_buttons(self, parent: Widget) -> None:
         """创建按钮区域"""
         # 按钮框架
@@ -401,6 +428,10 @@ class SettingsTab(Frame):
             # 封禁处理设置
             "enable_auto_retry_after_ban": self.enable_auto_retry_after_ban_check.get(),
             "default_ban_duration": self.default_ban_duration_spinbox.get(),
+
+            # 网络监听设置
+            "enable_network_monitor": self.enable_network_monitor_check.get(),
+            "network_monitor_interval": self.network_monitor_interval_spinbox.get(),
         }
 
     def set_config(self, config: dict) -> None:
@@ -441,6 +472,10 @@ class SettingsTab(Frame):
         # 封禁处理设置
         self.enable_auto_retry_after_ban_check.set(config.get("enable_auto_retry_after_ban", True))
         self.default_ban_duration_spinbox.set(config.get("default_ban_duration", 30))
+
+        # 网络监听设置
+        self.enable_network_monitor_check.set(config.get("enable_network_monitor", True))
+        self.network_monitor_interval_spinbox.set(config.get("network_monitor_interval", 2))
 
     def _on_save_click(self) -> None:
         """保存按钮点击事件"""
