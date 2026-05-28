@@ -1,0 +1,80 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Testing
+.pytest_cache/
+.hypothesis/
+.coverage
+htmlcov/
+.tox/
+
+# Logs
+*.log
+campus_net.log
+
+# User config (contains sensitive data)
+config.json
+
+# Build
+*.spec
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+bug_fix_report.txt
+version_info.txt
+RELEASE_NOTES.md
+
+# AI / dev files
+AI必看.md
+CLAUDE.md
+CLAUDE*
+
+# Task / sandbox
+_sandbox/
+_tasks/
+
+# Temporary scripts
+_cleanup.py
+_squash.py
+_create_release.py
+
+# Unused modules
+campus_net_auth/utils/route_manager.py
+
+# Codebuddy task
+.task
