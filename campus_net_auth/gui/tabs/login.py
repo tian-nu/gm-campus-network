@@ -10,7 +10,7 @@ from tkinter import *
 from typing import Callable
 
 from ..widgets import LabeledEntry, StatusLabel, ActionButton, SettingGroup
-from ...utils.network_info import NetworkInfo
+from ...utils.network_info import NetworkInfo, WlanStatus
 
 
 class LoginTab(Frame):
@@ -39,6 +39,7 @@ class LoginTab(Frame):
     ip_label: Label
     mac_label: Label
     network_name_label: Label
+    wlan_status_label: Label
     message_label: Label
 
     def __init__(
@@ -169,7 +170,7 @@ class LoginTab(Frame):
         # 代理警告标签（默认隐藏）
         self.proxy_warning_label = Label(
             button_frame,
-            text="⚠ 检测到代理已开启，登录可能被封禁",
+            text="⚠ 检测到代理已开启，可能被封禁",
             font=("Microsoft YaHei UI", 9),
             fg="#FF9800"
         )
@@ -249,6 +250,15 @@ class LoginTab(Frame):
             fg="#666666"
         )
         self.network_name_label.pack(side=LEFT, padx=(20, 0))
+
+        # WLAN 状态提示（默认隐藏，WLAN 异常时显示）
+        self.wlan_status_label = Label(
+            self.scrollable_frame,
+            text="",
+            font=("Microsoft YaHei UI", 10),
+            fg="#FF9800",
+            wraplength=350
+        )
 
         # 消息提示区域
         self.message_label = Label(
@@ -417,3 +427,31 @@ class LoginTab(Frame):
             self.network_name_label.config(text=text, fg="#666666")
         else:
             self.network_name_label.config(text="网名: 未检测到", fg="#999999")
+
+    def update_wlan_status(self, status: WlanStatus) -> None:
+        """
+        更新 WLAN 状态提示
+
+        Args:
+            status: WlanStatus 枚举值
+        """
+        if status == WlanStatus.CONNECTED:
+            # WiFi 已连接，隐藏提示
+            self.wlan_status_label.pack_forget()
+        elif status == WlanStatus.NOT_CONNECTED:
+            # WLAN 开启但未连接 WiFi
+            self.wlan_status_label.config(
+                text="⚠ 未连接到 WiFi，请连接校园网后重试",
+                fg="#FF9800"
+            )
+            self.wlan_status_label.pack(fill=X, pady=(5, 0))
+        elif status == WlanStatus.DISABLED:
+            # WLAN 适配器被禁用
+            self.wlan_status_label.config(
+                text="⚠ WLAN 已关闭，请开启无线网络",
+                fg="#F44336"
+            )
+            self.wlan_status_label.pack(fill=X, pady=(5, 0))
+        else:
+            # 无 WLAN 适配器（台式机等），不显示提示
+            self.wlan_status_label.pack_forget()

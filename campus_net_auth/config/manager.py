@@ -17,14 +17,25 @@ from .defaults import DEFAULT_CONFIG, AppConfig
 class ConfigManager:
     """配置管理器"""
 
-    def __init__(self, config_file: str = "config.json"):
+    def __init__(self, config_file: str = ""):
         """
         初始化配置管理器
 
         Args:
-            config_file: 配置文件路径
+            config_file: 配置文件路径，为空时自动使用 exe/脚本所在目录下的 config.json
         """
-        self.config_file = config_file
+        if not config_file:
+            # 使用绝对路径，确保开机自启动时也能正确找到配置文件
+            # （自启动时工作目录可能是 C:\Windows\System32）
+            if getattr(sys, 'frozen', False):
+                # PyInstaller 打包后的 exe：使用 exe 所在目录
+                base_dir = os.path.dirname(sys.executable)
+            else:
+                # 开发环境：使用项目根目录
+                base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            config_file = os.path.join(base_dir, "config.json")
+
+        self.config_file = os.path.abspath(config_file)
         self.logger = logging.getLogger(__name__)
         self._config: Optional[dict[str, object]] = None
 
@@ -202,6 +213,7 @@ class ConfigManager:
 
             if enable:
                 # 添加开机自启
+                # 对于 exe，直接写入路径即可（配置已使用绝对路径）
                 winreg.SetValueEx(key, app_name, 0, winreg.REG_SZ, exe_path)
                 self.logger.info(f"已启用开机自启: {exe_path}")
             else:

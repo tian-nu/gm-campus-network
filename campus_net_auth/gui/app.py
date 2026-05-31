@@ -15,7 +15,7 @@ from ..core.network import HeartbeatService, ReconnectService, WatchdogService
 from ..core.constants import Constants
 from ..config.manager import ConfigManager
 from ..utils.logger import setup_logging, add_gui_handler, remove_handler
-from ..utils.network_info import NetworkInfo
+from ..utils.network_info import NetworkInfo, WlanStatus
 from ..utils.power_monitor import PowerMonitor
 from ..utils.network_monitor import NetworkMonitor, NetworkEventHandler, NetworkEventType
 
@@ -196,11 +196,14 @@ class CampusNetApp:
                 network_info = NetworkInfo.get_network_info(self.config)
                 # 同时获取网络名称
                 net_names = NetworkInfo.get_connected_network_names()
+                # 同时获取 WLAN 状态
+                wlan_status = NetworkInfo.get_wlan_status()
                 self.root.after(0, lambda: (
                     self.login_tab.update_network_info(
                         network_info["ip"], network_info["mac"]
                     ),
-                    self.login_tab.update_network_name(net_names)
+                    self.login_tab.update_network_name(net_names),
+                    self.login_tab.update_wlan_status(wlan_status),
                 ))
             except Exception:
                 self.root.after(0, lambda: (
@@ -545,6 +548,24 @@ class CampusNetApp:
             self.tray.update_status(SystemTray.STATUS_OFFLINE)
         else:
             self.tray.update_status(SystemTray.STATUS_RECONNECTING)
+
+        # 异步更新网络信息（IP/MAC/设备名/WLAN状态），确保设备变化后同步
+        def _fetch_and_update():
+            try:
+                network_info = NetworkInfo.get_network_info(self.config)
+                net_names = NetworkInfo.get_connected_network_names()
+                wlan_status = NetworkInfo.get_wlan_status()
+                self.root.after(0, lambda: (
+                    self.login_tab.update_network_info(
+                        network_info["ip"], network_info["mac"]
+                    ),
+                    self.login_tab.update_network_name(net_names),
+                    self.login_tab.update_wlan_status(wlan_status),
+                ))
+            except Exception:
+                pass
+
+        threading.Thread(target=_fetch_and_update, daemon=True).start()
 
     def _auto_login(self) -> None:
         """自动登录（白名单检查在后台线程，避免阻塞 UI）"""

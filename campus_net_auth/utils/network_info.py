@@ -3,6 +3,7 @@
 获取本机 IP 地址和 MAC 地址
 """
 
+import enum
 import socket
 import subprocess
 import sys
@@ -42,6 +43,14 @@ def _run_subprocess(args: list, timeout: int = 3) -> subprocess.CompletedProcess
         result.stdout = result.stdout.decode("utf-8", errors="replace")
         result.stderr = result.stderr.decode("utf-8", errors="replace") if result.stderr else ""
     return result
+
+
+class WlanStatus(enum.Enum):
+    """WLAN 状态枚举"""
+    CONNECTED = "connected"           # WiFi 已连接
+    NOT_CONNECTED = "not_connected"   # WLAN 开启但未连接 WiFi
+    DISABLED = "disabled"             # WLAN 适配器被禁用
+    NOT_AVAILABLE = "not_available"   # 无 WLAN 适配器（台式机等）
 
 
 class NetworkInfo:
@@ -391,6 +400,88 @@ class NetworkInfo:
             cls._cache_time = now
         NetworkInfo._logger.info(f"当前连接的网络名称: {names}")
         return names
+
+    @classmethod
+    def get_wlan_status(cls) -> WlanStatus:
+        """
+        检测 WLAN 状态
+
+        通过 Windows netsh 命令判断 WLAN 适配器是否可用、是否已连接 WiFi。
+
+        Returns:
+            WlanStatus 枚举值
+        """
+        # 1. 检查是否有无线接口（WLAN 适配器）
+        has_wireless_adapter = False
+        wireless_connected = False
+        wireless_enabled = False
+
+        try:
+            result = _run_subprocess(
+                ["netsh", "interface", "show", "interface"], timeout=3)
+            for line in result.stdout.split('\n'):
+                tokens = line.split()
+                if len(tokens) >= 4:
+                    admin_state = tokens[0].lower()
+                    conn_state = tokens[1].lower()
+                    iface_type = tokens[2].lower() if len(tokens) > 2 else ""
+                    name = " ".join(tokens[3:]).lower()
+
+                    # 判断是否是无线接口
+                    is_wireless = any(kw in name for kw in (
+                        "wlan", "wi-fi", "wifi", "wireless",
+                        "无线", " WLAN"
+                    )) or "wireless" in iface_type
+
+                    if is_wireless:
+                        has_wireless_adapter = True
+                        if admin_state == "enabled":
+                            wireless_enabled = True
+                        if conn_state == "connected":
+                            wireless_connected = True
+        except Exception as e:
+            cls._logger.debug(f"检测无线接口失败: {e}")
+
+        # 2. 用 netsh wlan show interfaces 进一步确认
+        #    （某些系统接口名不含 wlan，但 wlan 命令仍可用）
+        try:
+            result = _run_subprocess(
+                ["netsh", "wlan", "show", "interfaces"], timeout=3)
+            output = result.stdout
+
+            # 如果命令本身报错（如"无线自动配置服务未运行"），说明 WLAN 服务未启动
+            if "not running" in output.lower() or "没有运行" in output:
+                if has_wireless_adapter:
+                    return WlanStatus.DISABLED
+                return WlanStatus.NOT_AVAILABLE
+
+            # 检查是否有接口
+            if "there is no" in output.lower() or "系统上没有" in output:
+                # netsh wlan 说没有接口
+                if has_wireless_adapter:
+                    # 有适配器但 wlan 服务不可用 = 被禁用
+                    return WlanStatus.DISABLED
+                return WlanStatus.NOT_AVAILABLE
+
+            # 解析状态
+            for line in output.split('\n'):
+                line_stripped = line.strip()
+                if 'state' in line_stripped.lower() or '状态' in line_stripped:
+                    if 'connected' in line_stripped.lower() or '已连接' in line_stripped:
+                        return WlanStatus.CONNECTED
+                    elif 'disconnected' in line_stripped.lower() or '已断开' in line_stripped:
+                        return WlanStatus.NOT_CONNECTED
+        except Exception as e:
+            cls._logger.debug(f"netsh wlan 检测失败: {e}")
+
+        # 3. 根据之前的接口检测结果判断
+        if not has_wireless_adapter:
+            return WlanStatus.NOT_AVAILABLE
+        if not wireless_enabled:
+            return WlanStatus.DISABLED
+        if wireless_connected:
+            return WlanStatus.CONNECTED
+        return WlanStatus.NOT_CONNECTED
 
     @staticmethod
     def is_network_whitelisted(whitelist: Optional[list] = None) -> bool:
