@@ -1,99 +1,59 @@
-# 校园网自动认证工具 v1.0
+# 校园网自动认证工具
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+广东工贸职业技术学院校园网自动登录工具，开机自动连接，断线自动重连。
 
-模块化重构版本，代码结构清晰，易于维护和扩展。
+> ⚠️ 本项目仅供学习使用，请遵守学校网络规定。
 
-> ⚠️ **注意**：本项目仅供学习和研究使用，请遵守学校网络使用规定。
+## 功能
 
-## 功能特点
-
-- ✅ 自动检测网络状态
-- ✅ 自动认证校园网 CAS 系统
-- ✅ 心跳保持防止掉线
-- ✅ 断线自动重连
-- ✅ 自动获取 IP 和 MAC 地址
-- ✅ 现代化图形界面
-- ✅ 系统托盘支持
-- ✅ 配置持久化
-
-## 项目结构
-
-```
-├── main.py                     # 应用入口
-├── requirements.txt            # 依赖列表
-├── campus_net_auth/            # 主模块
-│   ├── core/                   # 核心功能
-│   │   ├── authenticator.py    # CAS 认证器
-│   │   ├── network.py          # 心跳/重连服务
-│   │   └── constants.py        # 常量定义
-│   ├── config/                 # 配置管理
-│   │   ├── manager.py          # 配置管理器
-│   │   └── defaults.py         # 默认配置
-│   ├── gui/                    # 图形界面
-│   │   ├── app.py              # 主应用
-│   │   ├── widgets.py          # 自定义控件
-│   │   ├── tray.py             # 系统托盘
-│   │   └── tabs/               # 标签页
-│   │       ├── login.py        # 登录页
-│   │       ├── settings.py     # 设置页
-│   │       └── logs.py         # 日志页
-│   └── utils/                  # 工具模块
-│       ├── logger.py           # 日志配置
-│       └── network_info.py     # 网络信息
-└── tests/                      # 测试模块
-    ├── test_authenticator.py   # 认证器测试
-    ├── test_config.py          # 配置管理测试
-    ├── test_network.py         # 网络功能测试
-    └── ...                     # 其他测试文件
-```
-
-## 安装
-
-1. 确保已安装 Python 3.8 或更高版本
-
-2. 安装依赖：
-```bash
-pip install -r requirements.txt
-```
+- **一键登录** — 输入学号密码，自动完成 CAS 认证
+- **开机自启** — 开机自动登录，无需手动操作
+- **断线重连** — 网络断开自动检测并重连
+- **睡眠唤醒重连** — 笔记本合盖再打开，自动恢复连接
+- **网络变化检测** — 切换 WiFi / 插拔网线时自动重连
+- **心跳保活** — 定时发送心跳防止掉线
+- **代理检测** — 登录前检测代理，防止账号被封
+- **WLAN 状态提示** — WiFi 未开启或未连接时提醒
+- **系统托盘** — 最小化到托盘，后台静默运行
 
 ## 使用方法
 
-运行程序：
+### 方式一：直接运行（推荐）
+
+1. 从 [Releases](https://github.com/tian-nu/gm-campus-network/releases) 下载 `campus-net-auth.exe`
+2. 双击运行
+3. 输入学号和密码，点击「一键登录」
+4. 在设置页按需开启「自动登录」「开机自启」等
+
+### 方式二：从源码运行
+
 ```bash
+pip install -r requirements.txt
 python main.py
 ```
 
-### 首次使用
+## 常见问题
 
-1. 在"登录"标签页输入学号和密码
-2. 点击"一键登录"开始认证
-3. 在"设置"标签页配置心跳间隔、自动登录等选项
-4. 点击"保存设置"
+### 登录失败 / 账号被禁用？
 
-### 设置说明
+**最常见原因：代理软件干扰**
 
-| 设置项 | 说明 | 建议值 |
-|--------|------|--------|
-| 心跳间隔 | 保持连接的请求间隔 | 120-300 秒 |
-| 检测间隔 | 断线检测间隔 | 30 秒 |
-| 冷却时间 | 重连失败后等待时间 | 30 秒 |
-| 超时时间 | 网络请求超时 | 10 秒 |
+如果开了代理（Clash、V2Ray 等），校园网认证服务器被代理转发会导致账号被临时封禁（约30分钟）。解决方法：
 
-## 配置文件
+1. **关闭代理**后再登录
+2. 或在代理软件中将以下域名设为**直连**：
+   - `cas.gzittc.com`
+   - `portal.gzittc.com`
+   - `10.110.11.250`
 
-配置保存在 `config.json`，包含：
-- 账号密码（可选记住）
-- 启动设置
-- 网络设置
-- 心跳/重连设置
-- 高级设置
+> Clash 规则示例：`DOMAIN-SUFFIX,gzittc.com,DIRECT`
 
-## 日志
+### 其他可能原因
 
-日志保存在 `campus_net.log`，可在"日志"标签页查看。
+- **账号密码错误** — 检查输入是否正确
+- **账号被封禁** — 等待约30分钟后重试
+- **WiFi 未连接** — 工具会提示，请先连接校园网 WiFi
+- **WLAN 已关闭** — 笔记本请确认无线网络开关已开启
 
 ## 许可证
 
