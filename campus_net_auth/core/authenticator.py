@@ -351,6 +351,11 @@ class CampusNetAuthenticator:
         """处理 CAS 登录页面"""
         self.logger.info("在 CAS 登录页面")
 
+        # 优先检测密码过期页面（页面含"新密码"/"确认密码"表单而非登录表单）
+        if self._is_password_expired(response.text):
+            self.logger.warning("检测到密码已过期，需要修改密码")
+            return False, "密码已过期（校园网每3个月需更换密码），请手动访问认证平台修改密码后重新登录"
+
         # 提取表单字段
         form_fields = self._extract_form_fields(response.text)
 
@@ -515,6 +520,32 @@ class CampusNetAuthenticator:
                 return f"登录失败: {msg}"
 
         return ""
+
+    def _is_password_expired(self, html: str) -> bool:
+        """检测是否为密码过期/强制修改密码页面
+
+        密码过期页面特征：
+        - 含有"新密码"/"确认密码"表单（而非登录表单）
+        - 含有"密码过期"或"重新设置密码"提示
+        - 提交按钮为"修改"而非"登录"
+        """
+        expire_keywords = [
+            "密码过期",
+            "重新设置密码",
+            "必须重新设置密码",
+        ]
+        # 表单特征：有"新密码"和"确认密码"输入框
+        form_indicators = [
+            'name="password1"',       # 确认密码字段（登录页面无此字段）
+            'name="update"',          # 修改按钮（登录页面是 submit）
+            'value="修改"',            # 修改按钮文本
+        ]
+
+        has_keyword = any(kw in html for kw in expire_keywords)
+        has_form_indicator = any(ind in html for ind in form_indicators)
+
+        # 两个条件都满足才判定（避免误判）
+        return has_keyword and has_form_indicator
 
     def _is_account_banned(self, html: str) -> bool:
         """检查账号是否被封禁"""

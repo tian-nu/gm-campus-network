@@ -178,6 +178,7 @@ class ReconnectService:
         self._is_running = False
         self._last_attempt_time: float = 0
         self._ban_end_time: float = 0  # 添加封禁结束时间
+        self._password_expired: bool = False  # 密码是否已过期（停止重试直到用户修改）
         self.enable_auto_retry_after_ban = True  # 是否启用封禁后自动重试
         self.default_ban_duration = 30 * 60  # 默认封禁时长（秒）
         
@@ -264,6 +265,12 @@ class ReconnectService:
             try:
                 current_time = time.time()
                 
+                # 密码过期时停止重试，等待用户修改密码后手动登录
+                if self._password_expired:
+                    self.logger.debug("密码已过期，停止自动重试，等待用户修改密码")
+                    self._stop_event.wait(300)  # 每5分钟检查一次（用户可能已改密码）
+                    continue
+
                 # 检查白名单
                 if (self.network_whitelist_checker
                         and not self.network_whitelist_checker()):
@@ -323,8 +330,9 @@ class ReconnectService:
                         try:
                             success, message = self.login_func()
                             if success:
-                                # 重置封禁状态和退避计数器
+                                # 重置封禁状态、密码过期标志和退避计数器
                                 self._ban_end_time = 0
+                                self._password_expired = False
                                 self._reset_backoff()
                                 self.success_count += 1
                                 self.logger.info(f"重连成功: {message}")
@@ -333,6 +341,11 @@ class ReconnectService:
                             else:
                                 self.failure_count += 1
                                 self.logger.error(f"重连失败: {message}")
+                                
+                                # 检测密码过期，停止后续重试
+                                if "密码已过期" in message:
+                                    self._password_expired = True
+                                    self.logger.warning("密码已过期，停止自动重试")
                                 
                                 # 增加退避时间
                                 self._increment_backoff()
@@ -383,6 +396,11 @@ class ReconnectService:
         """设置封禁相关配置"""
         self.enable_auto_retry_after_ban = enable_auto_retry
         self.default_ban_duration = default_ban_duration_minutes * 60  # 转换为秒
+
+    def reset_password_expired(self) -> None:
+        """重置密码过期状态（用户修改密码后调用）"""
+        self._password_expired = False
+        self.logger.info("密码过期状态已重置")
 
     def set_backoff_config(self, enable: bool, min_backoff: float, max_backoff: float) -> None:
         """

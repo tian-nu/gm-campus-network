@@ -1,0 +1,16 @@
+# 任务计划 - 20260508 路由强制直连反制封禁
+
+## 问题
+使用 Radmin LAN / Clash Verge 时，校园网流量被虚拟网卡劫持，导致源 IP 不一致，账号被封禁 30 分钟。
+
+## 方案：路由强制直连 + Socket 绑定
+- [x] 创建 RouteManager（检测物理网卡、添加静态路由、绑定 session）
+- [x] 添加 Radmin LAN 检测到 ProxyDetector
+- [x] 修改 ProxyDetector.check_direct_connectivity() 绑定物理 IP
+- [x] 修改 authenticator.py 登录前调用 RouteManager
+- [x] 修改 network.py HeartbeatService/ReconnectService 使用绑定 session
+- [x] 修改 app.py 启动时初始化 + 退出时清理路由
+- [x] 更新 conftest.py 添加 RouteManager mock
+- [x] 创建 test_route_manager.py 测试
+- [x] 运行全部测试验证（114 passed, 1 error 为 Tcl 环境问题非代码问题）
+- [x] 更新 AI必看.md

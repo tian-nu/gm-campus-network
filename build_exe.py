@@ -119,7 +119,7 @@ def build_exe(python_exe):
         args.extend([f'--add-data={icon_path};.'])
 
     # 版本信息
-    version_file = os.path.join(PROJECT_ROOT, 'version_info.txt')
+    version_file = os.path.join(PROJECT_ROOT, '.project', 'docs', 'version_info.txt')
     if os.path.exists(version_file):
         args.extend([f'--version-file={version_file}'])
 

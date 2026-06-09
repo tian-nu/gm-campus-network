@@ -47,26 +47,16 @@ campus_net.log
 # User config (contains sensitive data)
 config.json
 
-# Build
+# Build artifacts
 *.spec
+version_info.txt
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Project specific
-bug_fix_report.txt
-version_info.txt
-RELEASE_NOTES.md
-
-# AI / dev files
-AI必看.md
-CLAUDE.md
-CLAUDE*
-
-# Task / sandbox
-_sandbox/
-_tasks/
+# Reference pages (saved HTML for development)
+*.html
 
 # Temporary scripts
 _*.py
@@ -74,5 +64,20 @@ _*.py
 # Unused modules
 campus_net_auth/utils/route_manager.py
 
-# Codebuddy task
+# Codebuddy
 .task
+
+# ============================================
+# .project 内部：临时产物不提交
+# ============================================
+.project/_sandbox/
+.project/tasks/archive/
+.project/tasks/prompts/
+
+# 根目录已迁移到 .project/ 的旧文件（防止重新创建）
+AI必看.md
+CLAUDE.md
+CLAUDE*
+RELEASE_NOTES.md
+_sandbox/
+_tasks/

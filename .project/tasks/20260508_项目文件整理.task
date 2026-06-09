@@ -1,0 +1,10 @@
+# 任务计划 - 20260508 项目文件整理
+
+- [x] 删除空文件 临时提供.txt
+- [x] 迁移根目录 .task 文件到 _tasks/ 并按规范重命名
+  - 代理问题分析与解决方案.task → _tasks/archive/20260322_代理问题分析与解决方案.task
+  - 项目初始化状态.task → _tasks/archive/20260322_项目初始化状态.task
+- [x] 创建 _tasks/archive/ 并归档已完成任务（20260508_白名单修复与直连校园网.task）
+- [x] 确认 CLAUDE.md 已覆盖 项目初始化状态.task 的独有信息（已确认，信息由 CLAUDE.md + README.md + requirements.txt 覆盖）
+- [x] 更新 .gitignore：.task → /*.task（只忽略根目录散落的 .task），新增 _sandbox/
+- [x] 验证整理结果
