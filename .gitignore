@@ -69,9 +69,7 @@ _sandbox/
 _tasks/
 
 # Temporary scripts
-_cleanup.py
-_squash.py
-_create_release.py
+_*.py
 
 # Unused modules
 campus_net_auth/utils/route_manager.py
