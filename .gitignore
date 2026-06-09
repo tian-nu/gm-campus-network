@@ -48,8 +48,8 @@ campus_net.log
 config.json
 
 # Build artifacts
-*.spec
-version_info.txt
+/*.spec
+/version_info.txt
 
 # OS
 .DS_Store
