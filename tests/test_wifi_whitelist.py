@@ -2,9 +2,23 @@
 
 from unittest.mock import Mock, patch
 
+import pytest
+
 from campus_net_auth.config.defaults import AppConfig, DEFAULT_CONFIG
 from campus_net_auth.utils.network_info import NetworkInfo
 from campus_net_auth.core.authenticator import CampusNetAuthenticator
+
+
+@pytest.fixture(autouse=True)
+def _clear_network_name_cache():
+    """
+    网络名称有 30 秒类级缓存，用例之间会互相污染，每个用例前清一次。
+    """
+    NetworkInfo._cached_network_names = None
+    NetworkInfo._cache_time = 0.0
+    yield
+    NetworkInfo._cached_network_names = None
+    NetworkInfo._cache_time = 0.0
 
 
 # ========== 配置测试 ==========
@@ -36,7 +50,7 @@ def test_get_connected_network_names_returns_wifi_ssid():
         BSSID                  : aa:bb:cc:dd:ee:ff
     """
     with patch("subprocess.run") as mock_run:
-        mock_run.return_value = Mock(stdout=netsh_output, returncode=0)
+        mock_run.return_value = Mock(stdout=netsh_output.encode("utf-8"), stderr=b"", returncode=0)
         with patch.object(NetworkInfo, "_logger"):
             names = NetworkInfo.get_connected_network_names()
     
@@ -49,7 +63,7 @@ def test_get_connected_network_names_ignores_bssid():
         BSSID                  : aa:bb:cc:dd:ee:ff
     """
     with patch("subprocess.run") as mock_run:
-        mock_run.return_value = Mock(stdout=netsh_output, returncode=0)
+        mock_run.return_value = Mock(stdout=netsh_output.encode("utf-8"), stderr=b"", returncode=0)
         with patch.object(NetworkInfo, "_logger"):
             names = NetworkInfo.get_connected_network_names()
     
@@ -65,7 +79,7 @@ Enabled        Connected      Dedicated      以太网
 Enabled        Connected      Dedicated      Ethernet
     """
     with patch("subprocess.run") as mock_run:
-        mock_run.return_value = Mock(stdout=netsh_output, returncode=0)
+        mock_run.return_value = Mock(stdout=netsh_output.encode("utf-8"), stderr=b"", returncode=0)
         with patch.object(NetworkInfo, "_logger"):
             names = NetworkInfo.get_connected_network_names()
     

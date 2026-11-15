@@ -49,7 +49,12 @@ class AppConfig:
 
     # 网络信息
     mac_address: str = ""
-    
+
+    # 代拨账号
+    # 账号绑了多个运营商宽带时，服务端会返回候选列表让你选。
+    # 填宽带账号的一部分（例如 GZLAN2637019652）即可固定选它，留空则优先选电信。
+    proxy_account: str = ""
+
     # 封禁处理设置
     enable_auto_retry_after_ban: bool = True
     default_ban_duration: int = 30  # 默认封禁时长（分钟）
@@ -119,7 +124,10 @@ DEFAULT_CONFIG = {
 
     # 网络信息
     "mac_address": "",
-    
+
+    # 代拨账号（留空则优先选电信）
+    "proxy_account": "",
+
     # 封禁处理设置
     "enable_auto_retry_after_ban": True,
     "default_ban_duration": 30,  # 默认封禁时长（分钟）

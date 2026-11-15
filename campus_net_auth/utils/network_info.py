@@ -8,7 +8,6 @@ import socket
 import subprocess
 import sys
 import time
-import uuid
 import re
 import logging
 import os
@@ -20,6 +19,35 @@ _SUBPROCESS_FLAGS = (
     if sys.platform == "win32" else {}
 )
 
+# 这些名字的网卡不能当主链路，否则会拿到 26.x / 172.31.x 这类假 IP
+# 注意：这里不能 import ..core.constants，core/__init__ 会反向 import 本模块，
+# 形成循环导入，所以关键字直接写在这里。
+VIRTUAL_ADAPTER_KEYWORDS = (
+    "radmin", "tap", "tun", "wireguard", "openvpn", "zerotier",
+    "tailscale", "vmware", "virtualbox", "hyper-v", "vethernet",
+    "loopback", "bluetooth", "蓝牙", "wsl", "docker",
+)
+
+
+def _decode_output(value) -> str:
+    """
+    把子进程输出解成字符串。
+
+    Windows 下 netsh / ipconfig 有时输出 UTF-8、有时 GBK（取决于系统区域设置），
+    所以按 utf-8 → gbk → gb18030 依次试，全失败再用 replace 兜底。
+    已经是 str 的直接返回，方便单测里用假对象替换 subprocess。
+    """
+    if isinstance(value, str):
+        return value
+    if not value:
+        return ""
+    for enc in ("utf-8", "gbk", "gb18030"):
+        try:
+            return value.decode(enc)
+        except UnicodeDecodeError:
+            continue
+    return value.decode("utf-8", errors="replace")
+
 
 def _run_subprocess(args: list, timeout: int = 3) -> subprocess.CompletedProcess:
     """
@@ -30,18 +58,8 @@ def _run_subprocess(args: list, timeout: int = 3) -> subprocess.CompletedProcess
     kwargs = {"capture_output": True, "timeout": timeout, **_SUBPROCESS_FLAGS}
     # 不传 text/encoding，拿原始 bytes
     result = subprocess.run(args, **kwargs)
-    # 尝试 UTF-8 → GBK 自适应解码
-    for enc in ("utf-8", "gbk", "gb18030"):
-        try:
-            result.stdout = result.stdout.decode(enc)
-            result.stderr = result.stderr.decode(enc) if result.stderr else ""
-            break
-        except UnicodeDecodeError:
-            continue
-    else:
-        # 兜底
-        result.stdout = result.stdout.decode("utf-8", errors="replace")
-        result.stderr = result.stderr.decode("utf-8", errors="replace") if result.stderr else ""
+    result.stdout = _decode_output(result.stdout)
+    result.stderr = _decode_output(result.stderr)
     return result
 
 
@@ -63,57 +81,203 @@ class NetworkInfo:
     _cache_time: float = 0.0
     _CACHE_TTL: float = 30.0  # 缓存有效期（秒）
 
+    # ------------------------------------------------------------------ 网卡选择
+
     @staticmethod
-    def get_ip_address() -> str:
+    def _default_routes() -> list:
+        """
+        读默认路由，返回按 metric 升序的 [(metric, interface_ip), ...]
+
+        路由表「接口」那一列正好等于该网卡自己的 IP，
+        可以直接拿去和 ipconfig 里的网卡块匹配。
+        """
+        try:
+            result = _run_subprocess(["route", "print", "-4"], timeout=3)
+        except Exception:
+            return []
+
+        routes = []
+        for line in (result.stdout or "").splitlines():
+            fields = line.split()
+            if len(fields) < 5:
+                continue
+            if fields[0] != "0.0.0.0" or fields[1] != "0.0.0.0":
+                continue
+            if not re.fullmatch(r"\d+\.\d+\.\d+\.\d+", fields[2]):
+                continue
+            try:
+                metric = int(fields[-1])
+            except ValueError:
+                metric = 99999
+            routes.append((metric, fields[3]))
+        routes.sort(key=lambda x: x[0])
+        return routes
+
+    @staticmethod
+    def _is_virtual_adapter(name: str) -> bool:
+        """名字命中虚拟网卡关键字就判定为虚拟"""
+        lowered = (name or "").lower()
+        return any(k in lowered for k in VIRTUAL_ADAPTER_KEYWORDS)
+
+    @classmethod
+    def parse_adapters(cls) -> list:
+        """
+        解析 ipconfig /all，返回所有网卡。
+
+        每项：{"name", "ip", "mac", "gw", "lease", "kind", "virtual"}
+        kind 取值：wired / wifi / virtual / other
+        """
+        try:
+            result = _run_subprocess(["ipconfig", "/all"], timeout=5)
+        except Exception:
+            return []
+
+        adapters = []
+        current = None
+
+        for line in (result.stdout or "").splitlines():
+            if not line.strip():
+                continue
+            if not line[0].isspace() and line.rstrip().endswith(":"):
+                current = {
+                    "name": line.strip().rstrip(":").strip(),
+                    "ip": "", "mac": "", "gw": "", "lease": "",
+                }
+                adapters.append(current)
+                continue
+            if current is None:
+                continue
+
+            m = re.search(r"IPv4\s*(?:地址|Address)[^:]*:\s*([\d.]+)", line)
+            if m and not current["ip"]:
+                current["ip"] = m.group(1)
+                continue
+            m = re.search(r"(?:物理地址|Physical Address)[^:]*:\s*([0-9A-Fa-f-]{17})", line)
+            if m and not current["mac"]:
+                current["mac"] = m.group(1).lower()
+                continue
+            m = re.search(r"(?:默认网关|Default Gateway)[^:]*:\s*([\d.]+)", line)
+            if m and not current["gw"]:
+                current["gw"] = m.group(1)
+                continue
+            m = re.search(r"(?:获得租约|Lease Obtained)[^:]*:\s*(.+)", line)
+            if m and not current["lease"]:
+                current["lease"] = m.group(1).strip()
+
+        for item in adapters:
+            # 标题带「以太网适配器 / 无线局域网适配器」前缀，去掉只留网卡名
+            item["name"] = re.sub(
+                r"^(以太网适配器|无线局域网适配器|未知适配器|"
+                r"Ethernet adapter|Wireless LAN adapter|Unknown adapter)\s*",
+                "", item["name"], flags=re.I,
+            ).strip()
+
+            name = item["name"]
+            if cls._is_virtual_adapter(name):
+                item["kind"] = "virtual"
+                item["virtual"] = True
+            elif re.search(r"(WLAN|无线|Wi-?Fi)", name, re.I):
+                item["kind"] = "wifi"
+                item["virtual"] = False
+            elif re.search(r"(以太网|Ethernet|本地连接|Local Area Connection)", name, re.I):
+                item["kind"] = "wired"
+                item["virtual"] = False
+            else:
+                item["kind"] = "other"
+                item["virtual"] = False
+
+        return adapters
+
+    @classmethod
+    def get_active_adapter(cls) -> Optional[dict]:
+        """
+        取真正承载默认路由的物理网卡。
+
+        机器上常同时有 Radmin/VPN/Docker 虚拟网卡，它们也有 IP 甚至网关，
+        靠「有没有网关」判断会选错（拿到 26.x / 172.31.x 去认证必然失败）。
+        metric 差距通常很大（有线 25 vs Radmin 9257），这个判据最可靠。
+        """
+        adapters = cls.parse_adapters()
+        by_ip = {a["ip"]: a for a in adapters if a["ip"]}
+
+        for metric, interface_ip in cls._default_routes():
+            adapter = by_ip.get(interface_ip)
+            if adapter and not adapter["virtual"]:
+                adapter["metric"] = metric
+                return adapter
+
+        # 兜底：有网关、非虚拟、不是 169.254 自分配地址
+        candidates = [a for a in adapters
+                      if a["ip"] and a["gw"] and not a["virtual"]
+                      and not a["ip"].startswith("169.254.")]
+        if candidates:
+            candidates.sort(key=lambda a: 0 if a["kind"] == "wired" else 1)
+            return candidates[0]
+
+        return None
+
+    @classmethod
+    def list_disabled_adapters(cls) -> list:
+        """
+        列出被系统禁用的网卡。
+
+        ipconfig 不会显示已禁用的网卡，所以单独用 netsh 查——
+        「网线插上没反应」十有八九就是网卡被禁用了。
+        """
+        try:
+            result = _run_subprocess(["netsh", "interface", "show", "interface"], timeout=3)
+        except Exception:
+            return []
+
+        disabled = []
+        for line in (result.stdout or "").splitlines():
+            if "已禁用" in line or "Disabled" in line:
+                fields = line.split()
+                if len(fields) >= 4:
+                    disabled.append(fields[-1])
+        return disabled
+
+    # ------------------------------------------------------------------ IP / MAC
+
+    @classmethod
+    def get_ip_address(cls) -> str:
         """
         获取本机 IP 地址
 
-        优先通过连接外部服务器获取，失败则通过主机名获取
+        优先用主用网卡的 IP（按路由 metric 选），
+        拿不到再退回「连一下外网看源地址」。
 
         Returns:
             IP 地址字符串
         """
-        # 方法1: 通过连接外部服务器获取
+        adapter = cls.get_active_adapter()
+        if adapter and adapter["ip"]:
+            return adapter["ip"]
+
+        # 兜底：UDP 连一下外网看源地址（不依赖网卡名解析）
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
                 s.settimeout(1)
-                s.connect(("114.114.114.114", 80))
+                s.connect(("223.5.5.5", 53))
                 ip = s.getsockname()[0]
-                if ip and not ip.startswith("127."):
+                if ip and not ip.startswith(("127.", "0.0.0.0")):
                     return ip
         except Exception:
             pass
 
-        # 方法2: 通过主机名获取
-        try:
-            hostname = socket.gethostname()
-            ip = socket.gethostbyname(hostname)
-            if ip and not ip.startswith("127."):
-                return ip
-        except Exception:
-            pass
-
-        # 方法3: 遍历所有网络接口
-        try:
-            result = _run_subprocess(["ipconfig"], timeout=2)
-            # 查找 IPv4 地址
-            matches = re.findall(r"IPv4.*?:\s*(\d+\.\d+\.\d+\.\d+)", result.stdout)
-            for ip in matches:
-                if not ip.startswith("127."):
-                    return ip
-        except Exception:
-            pass
-
-        # 兜底值
-        NetworkInfo._logger.warning("无法获取 IP 地址，使用默认值")
+        cls._logger.warning("无法获取 IP 地址，使用默认值")
         return "10.0.0.1"
 
-    @staticmethod
-    def get_mac_address(config: Optional[dict[str, object]] = None) -> str:
+    @classmethod
+    def get_mac_address(cls, config: Optional[dict[str, object]] = None) -> str:
         """
         获取 MAC 地址
 
-        优先从配置获取，否则自动检测
+        优先从配置获取，否则取主用网卡的物理地址。
+
+        注意：不能用 uuid.getnode()——它返回的是系统某个网卡（通常是第一块）
+        的 MAC，本机装了 Radmin VPN / VMware 时经常抓到虚拟网卡的地址，
+        拿去门户认证必然对不上 RADIUS 里的记录。
 
         Args:
             config: 配置字典，可包含 mac_address 键
@@ -125,19 +289,15 @@ class NetworkInfo:
         if config and config.get("mac_address"):
             return config["mac_address"]
 
-        # 自动获取 MAC 地址
-        try:
-            mac = uuid.getnode()
-            mac_str = ':'.join(('%012x' % mac)[i:i+2] for i in range(0, 12, 2))
-            return mac_str
-        except Exception:
-            pass
+        # 主用网卡的物理地址
+        adapter = cls.get_active_adapter()
+        if adapter and adapter["mac"]:
+            return adapter["mac"]
 
-        # Windows 特定方法
+        # 兜底：getmac 第一行
         try:
             result = _run_subprocess(["getmac", "/fo", "csv", "/nh"], timeout=2)
-            # 解析输出
-            lines = result.stdout.strip().split('\n')
+            lines = (result.stdout or "").strip().split('\n')
             if lines:
                 # 格式: "AA-BB-CC-DD-EE-FF","..."
                 mac = lines[0].split(',')[0].strip('"').replace('-', ':').lower()
@@ -158,11 +318,15 @@ class NetworkInfo:
             config: 配置字典
 
         Returns:
-            包含 ip, mac, timestamp 的字典
+            包含 ip, mac, adapter, gateway, kind, timestamp 的字典
         """
+        adapter = cls.get_active_adapter() or {}
         return {
             "ip": cls.get_ip_address(),
             "mac": cls.get_mac_address(config),
+            "adapter": adapter.get("name", ""),
+            "gateway": adapter.get("gw", ""),
+            "kind": adapter.get("kind", ""),
             "timestamp": int(time.time() * 1000)
         }
 
