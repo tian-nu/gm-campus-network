@@ -16,29 +16,39 @@ PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
 VENV_PYTHON = os.path.join(PROJECT_ROOT, '.venv', 'Scripts', 'python.exe')
 
 
-def get_venv_python():
-    """获取 .venv 的 Python 路径，不存在则报错"""
-    if not os.path.isfile(VENV_PYTHON):
-        print(f"[FAIL] 未找到 .venv 环境: {VENV_PYTHON}")
-        print("请先创建虚拟环境: python -m venv .venv")
-        sys.exit(1)
-    return VENV_PYTHON
+def resolve_python():
+    """
+    选打包用的解释器：有项目内 .venv 就优先用它，没有就退回当前解释器。
+
+    原来这里硬编码 .venv 且找不到就 exit(1)，而仓库里根本没有这个目录，
+    脚本等于完全跑不起来。现在两种环境都能打。
+    """
+    if os.path.isfile(VENV_PYTHON):
+        return VENV_PYTHON
+    print(f"[--] 未找到 .venv（{VENV_PYTHON}），改用当前解释器")
+    return sys.executable
 
 
-def check_venv_deps(python_exe):
-    """检查 .venv 中是否安装了必要的运行时依赖"""
-    required = ['requests', 'pyinstaller']
+def _installed_packages(python_exe):
+    """取已安装包名集合（小写），用于判断依赖是否齐"""
     result = subprocess.run(
-        [python_exe, '-m', 'pip', 'list', '--format=columns'],
+        [python_exe, '-m', 'pip', 'list', '--format=freeze'],
         capture_output=True, text=True
     )
-    installed = result.stdout.lower()
-    missing = []
-    for pkg in required:
-        if pkg.lower() not in installed:
-            missing.append(pkg)
+    names = set()
+    for line in result.stdout.splitlines():
+        if '==' in line:
+            names.add(line.split('==', 1)[0].strip().lower())
+    return names
+
+
+def check_deps(python_exe):
+    """检查并补齐打包所需的依赖（运行时依赖 + PyInstaller）"""
+    required = ['requests', 'pystray', 'pillow', 'pyinstaller']
+    installed = _installed_packages(python_exe)
+    missing = [pkg for pkg in required if pkg not in installed]
     if missing:
-        print(f"[!!] .venv 缺少依赖: {', '.join(missing)}")
+        print(f"[!!] 缺少依赖: {', '.join(missing)}")
         print("正在安装...")
         subprocess.run(
             [python_exe, '-m', 'pip', 'install'] + missing,
@@ -46,7 +56,7 @@ def check_venv_deps(python_exe):
         )
         print("[OK] 依赖安装完成")
     else:
-        print("[OK] .venv 依赖检查通过")
+        print("[OK] 依赖检查通过")
 
 
 def clean_build():
@@ -84,6 +94,9 @@ def build_exe(python_exe):
 
         '--hidden-import', 'requests',
         '--hidden-import', 'campus_net_auth',
+        # pystray 的后端是运行时动态导入的，PyInstaller 静态分析抓不到
+        '--hidden-import', 'pystray._win32',
+        '--hidden-import', 'PIL._tkinter_finder',
 
         # 排除不需要的大型模块（减小体积）
         '--exclude-module', 'pytest',
@@ -159,13 +172,13 @@ def main():
     print("=" * 50)
     print()
 
-    # 1. 获取 .venv Python
-    python_exe = get_venv_python()
-    print(f"[OK] 使用 .venv Python: {python_exe}")
+    # 1. 选定解释器
+    python_exe = resolve_python()
+    print(f"[OK] 使用解释器: {python_exe}")
     print()
 
     # 2. 检查依赖
-    check_venv_deps(python_exe)
+    check_deps(python_exe)
     print()
 
     # 3. 清理旧构建
