@@ -22,13 +22,7 @@ pytestmark = pytest.mark.skipif(not HAS_DISPLAY, reason="No display available")
 class TestWidgets:
     """控件测试"""
 
-    @pytest.fixture
-    def root(self):
-        """创建测试用根窗口"""
-        root = Tk()
-        root.withdraw()  # 隐藏窗口
-        yield root
-        root.destroy()
+    # root fixture 由 conftest.py 提供（会话级共享，避免反复 Tk() 触发 TclError）
 
     def test_labeled_entry(self, root):
         """测试 LabeledEntry 控件"""
@@ -129,13 +123,7 @@ class TestWidgets:
 class TestLoginTab:
     """登录标签页测试"""
 
-    @pytest.fixture
-    def root(self):
-        """创建测试用根窗口"""
-        root = Tk()
-        root.withdraw()
-        yield root
-        root.destroy()
+    # root fixture 由 conftest.py 提供（会话级共享）
 
     def test_login_tab_creation(self, root):
         """测试登录标签页创建"""
@@ -179,13 +167,7 @@ class TestLoginTab:
 class TestLogsTab:
     """日志标签页测试"""
 
-    @pytest.fixture
-    def root(self):
-        """创建测试用根窗口"""
-        root = Tk()
-        root.withdraw()
-        yield root
-        root.destroy()
+    # root fixture 由 conftest.py 提供（会话级共享）
 
     def test_logs_tab_creation(self, root):
         """测试日志标签页创建"""
@@ -197,13 +179,21 @@ class TestLogsTab:
         assert tab.log_text is not None
 
     def test_append_log(self, root):
-        """测试添加日志"""
+        """测试添加日志
+
+        append_log() 是 200ms 防抖（after + 缓冲区），不跑事件循环就读，
+        拿到的还是空文本——这是测试写法问题，不是功能问题。
+        """
         from campus_net_auth.gui.tabs.logs import LogsTab
 
         tab = LogsTab(root)
         tab.pack()
 
         tab.append_log("Test log message\n")
+
+        # 让防抖回调真正执行
+        root.after(300, root.quit)
+        root.mainloop()
 
         content = tab.get_log_content()
         assert "Test log message" in content
