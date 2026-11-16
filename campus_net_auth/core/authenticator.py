@@ -53,6 +53,21 @@ class AuthError(Exception):
 class CampusNetAuthenticator:
     """校园网认证器（Panabit RAAS）"""
 
+    # 判定「密码需要改」的关键词。学校每 3 个月强制改密，SSO 侧用提示页拦截，
+    # 页面文案不固定，多收几种说法；命中后统一产出 Constants.PASSWORD_EXPIRED_MARK。
+    _EXPIRED_KEYWORDS = (
+        "密码已过期", "密码过期", "密码已失效", "有效期已过",
+        "请修改密码", "需要修改密码", "修改密码后", "首次登录",
+    )
+
+    @classmethod
+    def _is_password_expired(cls, text: str) -> bool:
+        """文案是否表示密码需要修改（过期 / 首次登录强制改密）"""
+        if not text:
+            return False
+        return any(k in text for k in cls._EXPIRED_KEYWORDS)
+
+
     def __init__(self, config: dict):
         """
         初始化认证器
@@ -330,7 +345,14 @@ class CampusNetAuthenticator:
         if not errors:
             return False, "门户没有开启任何可用的登录方式，请联系网络中心"
 
-        return False, "；".join(errors)
+        joined = "；".join(errors)
+        # 密码过期必须让上层明确看到标记：守护进程靠它停止无意义重试，
+        # 用户也要知道该去统一身份认证改密码，而不是反复试密码。
+        if any(self._is_password_expired(e) for e in errors):
+            return False, "%s，请到统一身份认证修改密码后重试（%s）" % (
+                Constants.PASSWORD_EXPIRED_MARK, joined)
+
+        return False, joined
 
     def _mark_ok(self, method: str) -> None:
         self.is_logged_in = True
@@ -531,9 +553,15 @@ class CampusNetAuthenticator:
             m = re.search(r'value="([^"]+)"[^>]*name="__RequestVerificationToken"', html)
         return m.group(1) if m else ""
 
-    @staticmethod
-    def _extract_sso_error(html: str) -> str:
+    @classmethod
+    def _extract_sso_error(cls, html: str) -> str:
         """从 SSO 返回的 HTML 里抠出错误提示"""
+        # 密码过期优先判：过期页既没有 validation-summary，也不一定带"错误/失败"字样，
+        # 不先判就会掉到"账号或密码错误"的兜底文案，让用户白改一遍密码。
+        plain = re.sub(r"<[^>]+>", " ", html or "")
+        if cls._is_password_expired(plain):
+            return "%s，请到统一身份认证修改密码后重试" % Constants.PASSWORD_EXPIRED_MARK
+
         patterns = [
             r'<div[^>]*class="[^"]*validation-summary-errors[^"]*"[^>]*>(.*?)</div>',
             r'<span[^>]*class="[^"]*field-validation-error[^"]*"[^>]*>(.*?)</span>',
@@ -575,7 +603,7 @@ class CampusNetAuthenticator:
             return msg
         mapping = {
             1: "用户名或密码错误",
-            3: "首次登录需要先修改密码",
+            3: "%s或首次登录，请先到统一身份认证修改密码" % Constants.PASSWORD_EXPIRED_MARK,
             4: "账号被锁定，请稍后再试",
             5: "认证次数过多，账号已被临时封禁，请稍后再试",
             6: "账号已欠费或未开通",

@@ -38,8 +38,13 @@ class Constants:
     CODE_FAIL = 1           # 失败（用户名不存在 / 密码错误 / 次数过多）
     CODE_NEED_PROXY = 2     # 需要选择代拨账号（radius 模式）
     CODE_NEED_ISP = 7       # 需要选择运营商（portal 模式）
-    CODE_NEED_PWD_CHANGE = 3  # 首次登录必须改密码
+    CODE_NEED_PWD_CHANGE = 3  # 首次登录必须改密码 / 密码过期
     CODE_NO_PACKAGE = 8     # 账号没有可用套餐
+
+    # 密码过期标记：认证器产出给上层的文案里一定带这个词，
+    # 守护进程靠它停下无意义的重试（学校每 3 个月强制改密）。
+    # 改这里必须同步 _EXPIRED_KEYWORDS，否则检测会失效。
+    PASSWORD_EXPIRED_MARK = "密码已过期"
 
     # ==================== 网络检测 URL ====================
     # generate_204 正常响应是 204，不是 200，判断时要一起认

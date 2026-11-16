@@ -14,7 +14,11 @@ from hypothesis import given, strategies as st, settings
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from campus_net_auth.core.network import HeartbeatService, ReconnectService
+from campus_net_auth.core.network import (
+    HeartbeatService,
+    ReconnectService,
+    _need_password_change,
+)
 from campus_net_auth.core.constants import Constants
 
 
@@ -339,6 +343,47 @@ class TestReconnectServiceUnit:
         service.set_ban_config(False, 15)
         assert service.enable_auto_retry_after_ban is False
         assert service.default_ban_duration == 15 * 60  # 转换为秒
+
+    # ---------------------------------------------------------------- 密码过期
+
+    @pytest.mark.parametrize("message,expected", [
+        ("密码已过期，请到统一身份认证修改密码后重试", True),
+        ("密码已过期或首次登录，请先到统一身份认证修改密码", True),
+        ("认证失败：请先修改密码", True),
+        ("用户名或密码错误", False),
+        ("认证接口返回成功，但设备仍未上线", False),
+        ("", False),
+        (None, False),
+    ])
+    def test_need_password_change(self, message, expected):
+        """过期判据要认得认证器的新文案，同时不能把"密码错误"误判成过期"""
+        assert _need_password_change(message) is expected
+
+    def test_password_expired_stops_retrying(self):
+        """
+        认证器报密码过期后，重连必须停下来。
+
+        v3.0 换认证系统时这里曾靠字面量匹配旧文案，导致功能静默失效、
+        密码过期后仍无限重试。这条测试就是防这个回归。
+        """
+        service = ReconnectService(
+            check_interval=1,
+            cooldown=1,
+            network_checker=lambda: False,
+            login_func=lambda: (
+                False,
+                "%s，请到统一身份认证修改密码后重试" % Constants.PASSWORD_EXPIRED_MARK,
+            ),
+        )
+        service.start()
+        try:
+            deadline = time.time() + 5
+            while time.time() < deadline and not service._password_expired:
+                time.sleep(0.05)
+            assert service._password_expired is True
+            assert service.failure_count >= 1
+        finally:
+            service.stop(timeout=3)
 
 
 if __name__ == "__main__":

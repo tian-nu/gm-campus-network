@@ -175,6 +175,33 @@ class TestAuthenticatorUnit:
     def test_extract_sso_error_none(self):
         assert CampusNetAuthenticator._extract_sso_error("<div>ok</div>") == ""
 
+    # ---------------------------------------------------------------- 密码过期
+
+    @pytest.mark.parametrize("html", [
+        '<div class="tip">您的密码已过期，请修改密码后继续</div>',
+        "<p>密码有效期已过，请重新设置</p>",
+        "<li>密码已失效，需要修改密码</li>",
+    ])
+    def test_extract_sso_error_password_expired(self, html):
+        """SSO 的过期提示页必须被识别成"过期"，否则用户会以为是密码错"""
+        msg = CampusNetAuthenticator._extract_sso_error(html)
+        assert Constants.PASSWORD_EXPIRED_MARK in msg
+
+    def test_extract_sso_error_wrong_password_not_expired(self):
+        """密码真错了不能误判成过期，否则让用户白改一遍密码"""
+        html = '<div class="validation-summary-errors"><li>用户名或密码错误</li></div>'
+        assert Constants.PASSWORD_EXPIRED_MARK not in CampusNetAuthenticator._extract_sso_error(html)
+
+    def test_explain_code_pwd_change_marks_expired(self):
+        """code=3（首次登录/密码过期）必须带过期标记，守护进程靠它停重试"""
+        msg = CampusNetAuthenticator._explain_code(3, "")
+        assert Constants.PASSWORD_EXPIRED_MARK in msg
+
+    def test_is_password_expired(self):
+        assert CampusNetAuthenticator._is_password_expired("密码已过期") is True
+        assert CampusNetAuthenticator._is_password_expired("用户名或密码错误") is False
+        assert CampusNetAuthenticator._is_password_expired("") is False
+
     # ---------------------------------------------------------------- 代拨
 
     def test_pick_proxy_by_config(self):

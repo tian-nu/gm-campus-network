@@ -14,6 +14,18 @@ from .constants import Constants
 from ..utils.network_info import NetworkInfo
 
 
+def _need_password_change(message: str) -> bool:
+    """
+    认证返回的文案是否表示「密码需要修改」（过期 / 首次登录强制改密）。
+
+    主判据是 Constants.PASSWORD_EXPIRED_MARK——认证器的所有过期文案都带这个词；
+    再兜一层「修改密码」关键字，防止别处拼出来的文案漏判。
+    """
+    if not message:
+        return False
+    return Constants.PASSWORD_EXPIRED_MARK in message or "修改密码" in message
+
+
 class HeartbeatService:
     """心跳保持服务"""
 
@@ -342,10 +354,11 @@ class ReconnectService:
                                 self.failure_count += 1
                                 self.logger.error(f"重连失败: {message}")
                                 
-                                # 检测密码过期，停止后续重试
-                                if "密码已过期" in message:
+                                # 检测密码过期，停止后续重试（判据用常量，别写字面量：
+                                # v3.0 换认证系统时就是因为字符串对不上而静默失效过）
+                                if _need_password_change(message):
                                     self._password_expired = True
-                                    self.logger.warning("密码已过期，停止自动重试")
+                                    self.logger.warning("密码已过期或需修改，停止自动重试")
                                 
                                 # 增加退避时间
                                 self._increment_backoff()
